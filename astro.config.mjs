@@ -8,7 +8,7 @@ import rehypeAutolinkHeadings from 'rehype-autolink-headings';
 
 export default defineConfig({
   base: '/doc/', // Указываем имя репозитория с косой чертой
-  site: 'https://alexbalykin.github.io/doc', // URL сайта на GitHub Pages
+  site: 'https://marsel0.github.io/doc/', // URL сайта на GitHub Pages
   integrations: [
     starlight({
       title: 'Документация',
