@@ -3,19 +3,25 @@ function getDomain() {
   const domainFromUrl = params.get("domain");
 
   if (domainFromUrl) {
-    // сохраняем в localStorage
     localStorage.setItem("customDomain", domainFromUrl);
     return domainFromUrl;
   }
 
-  // если нет в URL — берем из localStorage
-  return localStorage.getItem("customDomain") || "youUrl";
+  return localStorage.getItem("customDomain") || "domain";
 }
 
 function replaceDomainInNode(node, domain) {
   if (node.nodeType === Node.TEXT_NODE) {
-    node.textContent = node.textContent.replace(/youUrl/g, domain);
-  } else {
+    node.textContent = node.textContent.replace(/domain/g, domain);
+  } else if (node.nodeType === Node.ELEMENT_NODE) {
+    // 🔹 проходим по всем атрибутам элемента
+    for (const attr of node.attributes) {
+      if (attr.value.includes("domain")) {
+        attr.value = attr.value.replace(/domain/g, domain);
+      }
+    }
+
+    // 🔹 рекурсивно обходим дочерние узлы
     node.childNodes.forEach((child) => replaceDomainInNode(child, domain));
   }
 }
@@ -25,8 +31,5 @@ function applyReplacement() {
   replaceDomainInNode(document.body, domain);
 }
 
-// Ставим обработчик и на первую загрузку, и на переходы по Starlight
 window.addEventListener("DOMContentLoaded", applyReplacement);
-
-// Перехват "виртуальной" навигации Astro/Starlight
 document.addEventListener("astro:page-load", applyReplacement);
