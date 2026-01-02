@@ -72,6 +72,6 @@ curl --location 'https://domain/public/api/v1/shop/orders' \
     - Если вы передали callbackUrl, вы можете ожидать callback по указанному адресу - там будет инфомрация о статусе ордера.
     - Если же callbackUrl не передавали, статус ордера надо проверить в ручную, используя [API](https://domain/public/api/v1/shop/orders/{id}) Пример:
 ```bash
-curl --location 'https://interpayment.cx/public/api/v1/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f' \
+curl --location 'https://domain/public/api/v1/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f' \
 --header 'Authorization: Bearer API_KEY'
 ```
