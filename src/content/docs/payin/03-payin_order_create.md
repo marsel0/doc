@@ -24,17 +24,19 @@ title: "PayIn. Создание ордера."
 
 -------------------
 
-### Параметры запроса
+### Параметры запроса (добавляются в тело запроса)
+
+Важна вложенность параметров в объекты, такие параметры указаны через точку. Например: payment.bank указывает на то, что параметр bank будет вложен в объект payment.
 
 | Поле              | Обязательное поле| Object| Тип            | Описание                                       | Значение по умолчанию |
 | ----------------- | ---| -------------------| ---------------| ------------------------------------------------ | --------------------- |
 | `amount`          | Обязательно| Блок               | `float`        | Сумма операции                                   |                       |
 | `currency`        | Обязательно| Блок               | `string`       | Валюта    | `RUB`                 |
-| `bank`            | Тип| payment            | `string`       | Предпочтительный банк. Если неважно — `any-bank` | `any-bank`            |
-| `type`            | Обязательно| payment            | `string`       | Способ оплаты | `any-bank`            |
-| `id`              | Обязательно| customer           | `string`       | ID получателя                                    |                       |
-| `name`            | Тип| customer           | `string`       | ФИО получателя                                   |                       |
-| `email`           | Тип| customer           | `list[string]` | Email получателя                                    | `RU`                  |
+| `payment.bank`            | Тип| payment            | `string`       | Предпочтительный банк. Если неважно — `any-bank` | `any-bank`            |
+| `payment.type`            | Обязательно| payment            | `string`       | Способ оплаты | `any-bank`            |
+| `customer.id`              | Обязательно| customer           | `string`       | ID получателя                                    |                       |
+| `customer.name`            | Тип| customer           | `string`       | ФИО получателя                                   |                       |
+| `customer.email`           | Тип| customer           | `list[string]` | Email получателя                                    | `RU`                  |
 | `telegram`        | Тип| customer           | `list[string]` | Telegram получателя                | `["sbp"]`             |
 | `cardInfo`        | Обязательно| customer.requisites| `string`       | Номер карты получателя                | `None`                |
 | `cardholder`      | Тип| customer.requisites| `string`       | Держатель карты                | `None`                |
