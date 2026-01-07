@@ -21,7 +21,7 @@ title: "PayOut. Получить ордер по ID"
 
 | Поле              | Обязательное поле| Object| Тип            | Описание                                       | Значение по умолчанию |
 | ----------------- | ---| -------------------| ---------------| ------------------------------------------------ | --------------------- |
-| `id`          | Обязательно| -               | `float`        | ID ордера который необходимо получить                                   |           -            |
+| `id`          | Обязательно| -               | `string`        | ID ордера который необходимо получить                                   |           -            |
 
 -------------------
 
@@ -40,38 +40,60 @@ curl --location 'https://domain/public/api/v1/shop/payout-orders/54a16d99-e268-4
 
 ### Структура ответа (может различаться в зависимости от полноты данных)
 
-| Поле              | Обязательное поле| Object| Тип            | Описание                                       | Значение по умолчанию |
-| ----------------- | ---| -------------------| ---------------| ------------------------------------------------ | --------------------- |
-| `id`          | Обязательно| Блок               | `float`        | ID ордера                                  |                       |
-| `amount`          | Обязательно| Блок               | `float`        | Сумма операции в фиат валюте (RUB)                                   |                       |
-| `currency`        | Обязательно| Блок               | `string`       | Валюта    | `RUB`                 |
-| `status`        | Обязательно| Блок               | `string`       | Статус ордера    | `RUB`                 |
-| `statusDetails`        | Обязательно| Блок               | `string`       | Описание статуса    | `RUB`                 |
-| `assetCurrencyAmount`        | Обязательно| Блок               | `string`       | Сумма операции в ассет валюте (USDT)    | `RUB`                 |
-| `shopAmount`        | Обязательно| Блок               | `string`       | Валюта    | `RUB`                 |
-| `shopFee`        | Обязательно| Блок               | `string`       | Комиссия магазина    | `RUB`                 |
-| `currencyRate`        | Обязательно| Блок               | `string`       | Курс валюты    | `RUB`                 |
-| `shop.name`     | Тип| integration        | `string`       | Имя магазина в системе               | `None`                |
-| `payment.bank`  | Тип| integration        | `string`       | Метод оплаты               | `None`                |
-| `payment.type`  | Тип| integration        | `string`       | Метод оплаты               | `None`                |
-| `customer.id`  | Тип| integration        | `string`       | ID пользователя               | `None`                |
-| `customer.name`  | Тип| integration        | `string`       | ФИО пользователя               | `None`                |
-| `customer.email`  | Тип| integration        | `string`       | Email пользователя               | `None`                |
-| `customer.telegram`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.phone`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.card`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.cardholder`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.swiftBic`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.bic`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.idCard`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.beneficiaryName`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.accountNumber`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.expirationDate`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `customer.requisites.taxId`  | Тип| integration        | `string`       | Номер телефона пользователя              | `None`                |
-| `integration.externalOrderId`  | Тип| integration        | `string`       | ID ордера в системе мерчанта               | `None`                |
-| `integration.callbackUrl`  | Тип| integration        | `string`       | URL адрес на который будут направлены коллбэки по ордеру               | `None`                |
-| `integration.callbackUrlStatus`  | Тип| integration        | `string`       | Статус отправки коллбэка               | `None`                |
-| `integration.callbackMethod`  | Тип| integration        | `string`       | Способ отправки коллбэков GET или POST               | `None`                |
+| Поле              |  Object| Тип            | Описание                                       | 
+| ----------------- |  -------------------| ---------------| ------------------------------------------------ | 
+| `id`          |  -              | `string`        | ID ордера                                  |
+| `initialAmount`          |  -              | `float`        | ID ордера                                  |
+| `amount`          |  -               | `float`        | Сумма операции в фиат валюте (RUB)                                   |
+| `currency`        |  -               | `string`       | Валюта    | 
+| `status`        |  -               | `string`       | Статус ордера    | 
+| `statusDetails`        |  -               | `string`       | Описание статуса    | 
+| `statusTimeoutAt`        |  -               | `string`       | Дата статуса????    | 
+| `assetCurrencyAmount`        |  -               | `float`       | Сумма операции в ассет валюте (USDT)    | 
+| `shopAmount`        |  -               | `float`       | Валюта    | 
+| `shopFee`        |  -               | `float`       | Комиссия магазина    | 
+| `initialShopCommission`        |  -               | `float`       | Комиссия магазина    | 
+| `requisites.countryCode`        |  requisites               | `string`       | Реквизиты. Код страны    | 
+| `requisites.countryNameRu`        |  requisites               | `string`       | Реквизиты. Наименование страны на русском    | 
+| `requisites.countryNameEn`        |  requisites               | `string`       | Реквизиты. Наименование страны на английском     | 
+| `requisites.phone`        |  requisites               | `string`       | Реквизиты. Номер телефона    | 
+| `requisites.cardInfo`        |  requisites               | `string`       | Реквизиты. Номер карты    | 
+| `requisites.bank`        |  requisites               | `string`       | Реквизиты. Символьный код банка    | 
+| `requisites.bankName`        |  requisites               | `string`       | Реквизиты. Наименование банка    | 
+| `requisites.sameBank`        |  requisites               | `boolean`       | Реквизиты. ????????   | 
+| `requisites.cardholder`        |  requisites               | `string`       | Реквизиты. Держатель карты    | 
+| `requisites.swiftBic`        |  requisites               | `string`       | Реквизиты. Свифт БИК??    | 
+| `requisites.bic`        |  requisites               | `string`       | Реквизиты. БИК    | 
+| `requisites.email`        |  requisites               | `string`       | Реквизиты. Email    | 
+| `requisites.idCard`        |  requisites               | `string`       | Курс валюты    | 
+| `requisites.beneficiaryName`        |  requisites               | `string`       | Курс валюты    | 
+| `requisites.accountNumber`        |  requisites               | `string`       | Реквизиты. Номер счета    | 
+| `requisites.taxId`        |  requisites               | `string`       | Курс валюты    | 
+| `requisites.expirationDate`        |  requisites               | `string`       | Курс валюты    | 
+| `requisites.sberPayUrl`        |  requisites               | `string`       | Курс валюты    | 
+| `requisites.paymentLink`        |  requisites               | `string`       | Реквизиты. Ссылка для оплаты    | 
+| `requisites.qrImageUrl`        |  requisites               | `string`       | Реквизиты. Ссылка для оплаты через QR код   | 
+| `shop.name`     | shop        | `string`       | Имя магазина в системе               | 
+| `payment.bank`  | payment        | `string`       | Метод оплаты               | 
+| `payment.type`  | payment        | `string`       | Метод оплаты               |
+| `customer.id`  | customer        | `string`       | ID пользователя               |
+| `customer.name`  | customer        | `string`       | ФИО пользователя               |
+| `customer.email`  | customer        | `string`       | Email пользователя               |
+| `customer.telegram`  | customer        | `string`       | Учетная запись телеграмм              |
+| `customer.requisites.phone`  | customer.requisites        | `string`       | Реквизиты. Номер телефона              |
+| `customer.requisites.card`  | customer.requisites        | `string`       | Реквизиты. Номер телефона              |
+| `customer.requisites.cardholder`  | customer.requisites        | `string`       | Держатель карты              |
+| `customer.requisites.swiftBic`  | customer.requisites        | `string`       | Номер телефона пользователя              |
+| `customer.requisites.bic`  | customer.requisites        | `string`       | БИК пользователя             |
+| `customer.requisites.idCard`  | customer.requisites        | `string`       | Номер телефона пользователя              |
+| `customer.requisites.beneficiaryName`  | customer.requisites        | `string`       | Номер телефона пользователя              |
+| `customer.requisites.accountNumber`  | customer.requisites        | `string`       | Номер счета пользователя             |
+| `customer.requisites.expirationDate`  | customer.requisites        | `string`       | Номер телефона пользователя              |
+| `customer.requisites.taxId`  | customer.requisites        | `string`       | Номер телефона пользователя              |
+| `integration.externalOrderId`  |integration        | `string`       | ID ордера в системе мерчанта               |
+| `integration.callbackUrl`  | integration        | `string`       | URL адрес на который будут направлены коллбэки по ордеру               |
+| `integration.callbackUrlStatus`  | integration        | `string`       | Статус отправки коллбэка               |
+| `integration.callbackMethod`  | integration        | `string`       | Способ отправки коллбэков GET или POST               |
 
 
 ### Примеры ответов
