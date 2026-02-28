@@ -22,12 +22,8 @@ title: "Cancel order"
 
 * Headers: `"Authorization": "{Bearer API_KEY}"`
 
+## Header Parameters (Заголовки запроса)
 
-======path Parameters===========
-
-
-
-
-
-
-=======header Parameters========
+| Параметр      | Обязательное | Тип    | Значение              | Описание                      |
+| ------------- | ------------ | ------ | --------------------- | ----------------------------- |
+| Authorization | Обязательно  | string | Bearer **shopApiKey** | Токен авторизации магазина для доступа |
