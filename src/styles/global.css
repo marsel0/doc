@@ -1,15 +1,29 @@
 table {
-    width: auto;  /* Не 100% */
-    border-collapse: collapse;
-    table-layout: auto;  /* Фиксированные колонки */
-  }
-  th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    word-break: break-word;  /* Перенос длинных слов */
-    white-space: nowrap;     /* Или normal для переносов */
-    max-width: 201px;
-  }
+  width: auto;
+  border-collapse: separate;  /* ИЗМЕНИТЕ: separate вместо collapse */
+  border-spacing: 0;          /* НОВОЕ: убирает промежутки */
+  table-layout: auto;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  word-break: break-word;
+  white-space: nowrap;
+  max-width: 201px;
+  
+  /* НОВОЕ: для четких вертикальных линий */
+  box-sizing: border-box;
+}
+
+/* Дополнительно для Starlight/MDX таблиц */
+th {
+  border-top: 1px solid #ddd;
+  border-bottom: 2px solid #333;  /* Более заметные заголовки */
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+}
 
   .right-sidebar-panel {
     display: none !important;
