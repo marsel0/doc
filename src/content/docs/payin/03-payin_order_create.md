@@ -2,48 +2,49 @@
 title: "PayIn. Создание ордера."
 ---
 
-# PayIn. Создание ордера
-
-
-
-
-
-# доделать примеры ответов, описание полей ответов. скопировать актуальные данные в метод payout
-
-
 ## Описание
+Метод используется для создания PayIn ордера мерчантом. Ордер будет создан для магазина, API ключ которого был использован при авторизации.
 
-Метод используется для создания PayOut ордера мерчантом. Ордер будет создан для магазина, API ключ которого был использован при авторизации.
 
--------------------
 ### Структура запроса
 
 * `Метод: POST`
 * `Endpoint: https://domain/public/api/v1/shop/orders/sync-requisites`
-* `Headers: "Authorization": "{Bearer API_KEY}`
+* `Headers: "Authorization": "{Bearer shopApiKey}`
 
--------------------
+## Header Parameters (Заголовки запроса)
 
-### Параметры запроса (добавляются в тело запроса)
+| Параметр      | Обязательное поле | Тип    | Значение              | Описание                    |
+|---------------|-------------------|--------|-----------------------|-----------------------------|
+| Authorization | Да                | string | Bearer **shopApiKey** | Токен авторизации магазина  |
+| Content-Type  | Да                | string | application/json      | Формат данных запроса (JSON)|
+
+
+## Request Body parameters (Параметры тела запроса)
 
 Важна вложенность параметров в объекты, такие параметры указаны через точку. Например: payment.bank указывает на то, что параметр bank будет вложен в объект payment.
 
-| Поле              | Обязательное поле| Object| Тип            | Описание                                       | Значение по умолчанию |
-| ----------------- | ---| -------------------| ---------------| ------------------------------------------------ | --------------------- |
-| amount          | Обязательно| Блок               | float        | Сумма операции                                   |                       |
-| currency        | Обязательно| Блок               | string       | Валюта    | RUB                 |
-| payment.bank            | Тип| payment            | string       | Предпочтительный банк. Если неважно — any-bank | any-bank            |
-| payment.type            | Обязательно| payment            | string       | Способ оплаты | any-bank            |
-| customer.id              | Обязательно| customer           | string       | ID получателя                                    |                       |
-| customer.name            | Тип| customer           | string       | ФИО получателя                                   |                       |
-| customer.email           | Тип| customer           | list[string] | Email получателя                                    | RU                  |
-| telegram        | Тип| customer           | list[string] | Telegram получателя                | ["sbp"]             |
-| cardInfo        | Обязательно| customer.requisites| string       | Номер карты получателя                | None                |
-| cardholder      | Тип| customer.requisites| string       | Держатель карты                | None                |
-| expirationDate  | Тип| customer.requisites| string       | Варианты реквизитов для получения                | None                |
-| externalOrderId | Тип| integration        | string       | ID ордера в системе мерчанта                | None                |
-| callbackUrl     | Тип| integration        | string       | URL адрес на который будут направлены коллбэки по ордеру                | None                |
-| callbackMethod  | Тип| integration        | string       | Способ отправки коллбэков GET или POST               | None                |
+
+| Параметр                  | Обязательное поле | Object         | Тип    | Описание                                                         |
+|---------------------------|-------------------|----------------|--------|------------------------------------------------------------------|
+| **amount**                    | Да                | -              | number | Сумма заявки                                                     |
+| currency                  | Да                | -              | string | Валюта                                                           |
+| payment.bank              | Нет               | payment        | string | Предпочтительный банк (влияет на подбираемые реквизиты для заявки)|
+| payment.customerBank      | Нет               | payment        | string | Банк клиента (информационное поле)                               |
+| **payment.type**              | Да                | payment        | string | Способ оплаты                                                    |
+| **customer.id**               | Да                | customer       | string | ID клиента                                                       |
+| customer.name             | Нет               | customer       | string | ФИО клиента                                                      |
+| customer.email            | Нет               | customer       | string | Email клиента                                                    |
+| customer.ip               | Нет               | customer       | string | IP адрес клиента                                                 |
+| customer.phone            | Нет               | customer       | string | Телефон клиента                                                  |
+| customer.fingerprint      | Нет               | customer       | string | Fingerprint клиента                                              |
+| integration.externalOrderId | Нет             | integration    | string | ID заявки в системе мерчанта                                     |
+| integration.callbackUrl   | Нет               | integration    | string | URL адрес на который будут направлены коллбэки по заявке         |
+| integration.callbackMethod| Нет               | integration    | string | Способ отправки коллбэков GET или POST                           |
+| integration.returnUrl     | Нет               | integration    | string | URL для редиректа клиента при редирект-интеграции                |
+| integration.successUrl    | Нет               | integration    | string | URL для редиректа клиента в случае успешной оплаты               |
+| integration.failUrl       | Нет               | integration    | string | URL для редиректа клиента в случае неуспешной оплаты или ошибки  |
+
 
 -------------------
 
@@ -217,7 +218,6 @@ json
 | integration.callbackUrlStatus  | Тип| integration        | string       | Статус отправки коллбэка               | None                |
 | integration.returnUrl  | Тип| integration        | string       | Способ отправки коллбэков GET или POST               | None                |
 | integration.externalOrderId  | Тип| integration        | string       | ID ордера в системе мерчанта               | None                |
-
 
 
 
