@@ -12,6 +12,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Документация',
+      customCss: ['./src/styles/global.css'],
       tableOfContents: false,  // Отключает правый ToC-сайдбар
       sidebar: [
 	{
