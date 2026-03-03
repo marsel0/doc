@@ -6,7 +6,7 @@ title: "PayIn. Получить ордер по ID"
 
 ### Описание
 
-Метод используется для получения данных по PayIn ордеру. В query запроса добавляется параметр ID, тело запроса остается пустым.
+Метод используется для получения данных по PayIn ордеру. 
 
 -------------------
 ### Структура запроса
@@ -87,76 +87,3 @@ curl --location 'https://domain/public/api/v1/shop/orders/e6181726-e044-43b4-a35
 
 ### Примеры ответов
 
-<details>
-
-<summary><strong>Получить данные по ордеру<code>8382eac8-7c2c-4043-84b4-a4d8bfc31e57</code></strong></summary>
-
-```json
-{
-    "id": "8382eac8-7c2c-4043-84b4-a4d8bfc31e57",
-    "initialAmount": 1800,
-    "amount": 1800,
-    "currency": "RUB",
-    "status": "completed",
-    "statusDetails": null,
-    "statusTimeoutAt": null,
-    "requisites": {
-        "cardInfo": null,
-        "cardholder": "sbp sber",
-        "swiftBic": null,
-        "bic": null,
-        "email": null,
-        "idCard": null,
-        "beneficiaryName": null,
-        "accountNumber": null,
-        "expirationDate": null,
-        "taxId": null,
-        "paymentLink": null,
-        "phone": "+70000000009",
-        "bank": "sberbank",
-        "bankName": "СберБанк",
-        "sameBank": false,
-        "countryCode": null,
-        "countryNameEn": null,
-        "countryNameRu": null,
-        "sberPayUrl": null
-    },
-    "shop": {
-        "name": "igor_test_shop",
-        "customerDataCollectionOrder": "after_payment",
-        "collectCustomerReceipts": false
-    },
-    "payment": {
-        "bank": "sberbank",
-        "type": "sbp",
-        "customerName": "12 12 12",
-        "customerPhoneLastDigits": "1234",
-        "customerBank": "12"
-    },
-    "customer": {
-        "id": "09387",
-        "ip": null,
-        "fingerprint": null,
-        "name": null,
-        "email": null,
-        "phone": null
-    },
-    "assetCurrencyAmount": 15.48361,
-    "shopAmount": 10.83852,
-    "shopFee": 4.64509,
-    "initialShopCommission": 30,
-    "currencyRate": 116.25189,
-    "integration": {
-        "link": "https://qa-sci.domain/order/8382eac8-7c2c-4043-84b4-a4d8bfc31e57/32811562-d164-41e1-a902-d8405b2e51f4",
-        "token": "32811562-d164-41e1-a902-d8405b2e51f4",
-        "callbackUrl": "https://www.testUrlCallback.com",
-        "callbackMethod": "post",
-        "callbackUrlStatus": "error",
-        "returnUrl": "https://returnedUrl.com",
-        "successUrl": "https://successUrlReturned.com",
-        "failUrl": "https://failUrlReturned.com",
-        "externalOrderId": "1233456"
-    }
-}
-```
-</details>
