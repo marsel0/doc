@@ -12,6 +12,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Документация',
+      tableOfContents: false,  // Отключает правый ToC-сайдбар
       sidebar: [
 	{
           label: 'Начало работы',
