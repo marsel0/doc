@@ -18,3 +18,10 @@ table {
   .sl-content-wrapper {
     grid-template-columns: 1fr !important;  /* Только контент */
   }
+
+  main {
+    /* Было: max-width: 60ch; (или 800px) */
+    max-width: 1400px; /* Увеличьте или измените на 100% */
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
