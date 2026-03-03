@@ -13,7 +13,7 @@ curl --location 'https://domain/public/api/v1/shop/orders' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer API_KEY' \
 --data '{
-    "amount": 111,
+    "amount": 111, //сумма
     "currency": "RUB",
     "customer": {
         "id": "test-order"
