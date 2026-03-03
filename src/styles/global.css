@@ -1,41 +1,36 @@
+/* 1. УБИРАЕМ ограничение ширины основного контейнера */
+.sl-content-wrapper > main,
+main {
+  max-width: none !important;      /* Убирает все лимиты */
+  width: 100%;
+  padding: 0 1rem;
+}
+
+/* 2. ОТКЛЮЧАЕМ перенос в таблицах */
 table {
   width: auto;
-  border-collapse: separate;  /* ИЗМЕНИТЕ: separate вместо collapse */
-  border-spacing: 0;          /* НОВОЕ: убирает промежутки */
+  min-width: 100%;                /* Таблица определяет ширину */
+  white-space: nowrap;            /* ГЛАВНОЕ: нет переносов */
   table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 th, td {
-  border: 2px solid #ddd;
-  padding: 8px;
-  word-break: break-word;
-  white-space: nowrap;
-  max-width: 201px;
-  
-  /* НОВОЕ: для четких вертикальных линий */
+  white-space: nowrap;            /* Нет переносов в ячейках */
+  word-break: normal;             /* Отключаем разрыв слов */
+  padding: 8px 12px;
+  border: 1px solid #ddd;
   box-sizing: border-box;
 }
 
-/* Дополнительно для Starlight/MDX таблиц */
-th {
-  border-top: 1px solid #ddd;
-  border-bottom: 2px solid #333;  /* Более заметные заголовки */
-  background: #f8f9fa;
-  position: sticky;
-  top: 0;
-}
-
-  .right-sidebar-panel {
-    display: none !important;
+/* 3. Горизонтальная прокрутка для узких экранов */
+@media (max-width: 1024px) {
+  .sl-content-wrapper {
+    overflow-x: auto;             /* Прокрутка страницы */
   }
   
-  .sl-content-wrapper {
-    grid-template-columns: 1fr !important;  /* Только контент */
+  table {
+    min-width: 800px;             /* Минимум для читаемости */
   }
-
-  main {
-    /* Было: max-width: 60ch; (или 800px) */
-    max-width: 1400px; /* Увеличьте или измените на 100% */
-    margin: 0 auto;
-    padding: 0 1rem;
-  }
+}
