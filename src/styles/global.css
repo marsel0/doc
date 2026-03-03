@@ -1,0 +1,12 @@
+table {
+    width: auto;  /* Не 100% */
+    border-collapse: collapse;
+    table-layout: fixed;  /* Фиксированные колонки */
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    word-break: break-word;  /* Перенос длинных слов */
+    white-space: nowrap;     /* Или normal для переносов */
+    max-width: 200px;
+  }
