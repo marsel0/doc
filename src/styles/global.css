@@ -1,7 +1,7 @@
 table {
     width: auto;  /* Не 100% */
     border-collapse: collapse;
-    table-layout: fixed;  /* Фиксированные колонки */
+    table-layout: auto;  /* Фиксированные колонки */
   }
   th, td {
     border: 1px solid #ddd;
@@ -9,4 +9,12 @@ table {
     word-break: break-word;  /* Перенос длинных слов */
     white-space: nowrap;     /* Или normal для переносов */
     max-width: 201px;
+  }
+
+  .right-sidebar-panel {
+    display: none !important;
+  }
+  
+  .sl-content-wrapper {
+    grid-template-columns: 1fr !important;  /* Только контент */
   }
