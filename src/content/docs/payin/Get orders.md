@@ -1,10 +1,6 @@
 ---
-title: "Get orders"
+title: "PayIn. Получение информации по заявкам за период"
 ---
-
-
-# PayIn. Получение информации по заявкам за период
-
 
 ## Описание
 
@@ -14,14 +10,14 @@ title: "Get orders"
 ## Структура запроса
 
 * Метод: `GET`
-* Endpoint: `https://domain/public/api/v1/shop/orders`
+* Endpoint: `$BASE_URL/public/api/v1/shop/orders`
 
 
 ## Header Parameters (Заголовки запроса)
 
 | Параметр      | Обязательное | Тип    | Значение              | Описание                      |
 | ------------- | ------------ | ------ | --------------------- | ----------------------------- |
-| Authorization | Обязательно  | string | Bearer **shopApiKey** | Токен авторизации магазина |
+| Authorization | Обязательно  | string | Bearer **shopApiKey** | Токен авторизации магазина    |
 
 
 ## Query Parameters (передаются в URL)
@@ -31,7 +27,7 @@ title: "Get orders"
 | from     | Да           | string | Начало периода (YYYY-MM-DD)                                        | 2026-02-01        |
 | to       | Да           | string | Конец периода (YYYY-MM-DD)                                         | 2026-02-27        |
 | page     | Нет          | string | Номер страницы (по умолчанию: 1)                                   | 2                 |
-| status   | Нет          | string | Статус ордера                                                      | completed         |
+| status   | Нет          | string | Статус заявки                                                      | completed         |
 | take     | Нет          | string | Количество записей на страницу (по умолчанию: 100, максимум: 1000) | 50                |
 
 
@@ -53,3 +49,15 @@ title: "Get orders"
 | `dispute`             | Диспут                                        |
 
 </details>
+
+### Пример запроса
+
+```bash
+curl --location --request GET 'https://qa.tapbank.net/public/api/v1/shop/orders' \
+--header 'from: 2026-01-01' \
+--header 'to: 2025-01-31' \
+--header 'status: completed' \
+--header 'take: 500' \
+--header 'page;' \
+--header 'Authorization: ••••••'
+```
