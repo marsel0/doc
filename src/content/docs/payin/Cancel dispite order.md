@@ -1,5 +1,4 @@
 ---
-title: "Cancel dispite order"
+title: "PayIn. Отмена диспута по заявке"
 ---
 
-# PayIn. Отмена диспута по заявке
