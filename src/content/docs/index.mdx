@@ -1,8 +1,140 @@
 ---
 title: Главная
+tableOfContents: false
 ---
 
-# <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank">Добро пожаловать в документацию 🚀</a>
+# Документация simple-pay
 
-Это стартовая страница  
-Выбирайте разделы в сайдбаре
+`simple-pay` предоставляет merchant API для `payin` и `payout`, callback-уведомления, работу с балансами магазина и набор служебных endpoint-ов для интеграции.
+
+Эта документация написана так, чтобы интегратор мог стартовать, имея только:
+
+- домен инстанса `simple-pay`;
+- `Shop API key`;
+- `Balance API key`;
+- `Signature key` для callback.
+
+## С чего начать, если у вас только домен и ключи
+
+### 1. Соберите `BASE_URL`
+
+Если у вас есть домен инстанса, merchant API обычно вызывается по префиксу:
+
+```bash
+export DOMAIN="[[DOMAIN_URL]]"
+export BASE_URL="$DOMAIN/public/api/v1"
+```
+
+Дальше все merchant-запросы из документации используют именно `BASE_URL`.
+
+### 2. Проверьте, что `Shop API key` работает
+
+```bash
+export SHOP_TOKEN="<SHOP_API_KEY>"
+
+curl --location "$BASE_URL/shop/info" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
+
+Если ключ корректный, вы получите базовую информацию о магазине.
+
+### 3. Проверьте доступные методы
+
+Для `payin`:
+
+```bash
+curl --location "$BASE_URL/shop/trade-methods" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
+
+Для `payout`:
+
+```bash
+curl --location "$BASE_URL/shop/trade-methods/payout" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
+
+### 4. Создайте первый тестовый ордер
+
+- для приёма платежей начните со страницы [PAYIN: способы и API-примеры](/doc/payin/02-integration/)
+- для выплат начните со страницы [PAYOUT: способы и API-примеры](/doc/payout/02-integration/)
+
+### 5. Настройте получение статусов
+
+Рекомендуемая схема:
+
+- `callbackUrl` , основной канал статусов;
+- `GET`-чтение ордера по `id` или `externalOrderId` , резервный механизм контроля и восстановления состояния.
+
+С учётом того, что у интегратора есть `Signature key`, callback стоит реализовывать сразу как обязательную часть интеграции.
+
+## Что вы можете делать через API
+
+### PayIn
+
+- создавать ордера;
+- читать ордера по `id` и `externalOrderId`;
+- обновлять payment-данные;
+- запускать поиск реквизитов;
+- подтверждать оплату;
+- отменять ордер;
+- открывать и закрывать dispute;
+- загружать и читать чеки.
+
+### PayOut
+
+- получать доступные payout methods;
+- создавать payout-ордера;
+- читать payout по `id` и `externalOrderId`;
+- отменять payout-ордеры в допустимых статусах;
+- получать статусы через callback или `GET`.
+
+### Shop / Service
+
+- проверять магазин и курсы;
+- читать баланс;
+- создавать заявки на вывод средств магазина;
+- читать справочники.
+
+## Что важно понимать про “изменение статусов”
+
+Merchant не записывает статус ордера произвольным полем вроде `status=completed`.
+
+Статусы меняются через action-методы:
+
+- `POST /shop/orders/{id}/start-payment`
+- `POST /shop/orders/{id}/confirm-payment`
+- `POST /shop/orders/{id}/cancel`
+- `POST /shop/orders/{id}/dispute`
+- `POST /shop/orders/{id}/dispute/cancel`
+- `POST /shop/payout-orders/{id}/cancel`
+
+То есть мерчант управляет не самим значением `status`, а бизнес-действиями, которые переводят ордер в следующий допустимый статус.
+
+## Быстрый маршрут по документации
+
+1. Прочитайте [Схему интеграции](/doc/docs/01-integration_guide/).
+2. Проверьте [Работа с магазином](/doc/docs/06-shop_management/), чтобы настроить базовые переменные и первый тестовый запрос.
+3. Выберите [PAYIN](/doc/payin/01-redirect_integration/) или [PAYOUT](/doc/payout/01-integration/).
+4. Используйте страницы с готовыми `curl`-примерами.
+5. Отдельно проверьте [ошибки](/doc/docs/02-api_error_guide/), [рандомизацию](/doc/docs/03-randomization/) и [антифрод](/doc/docs/04-antifrod/).
+
+## Основные страницы
+
+- [Схема интеграции](/doc/docs/01-integration_guide/)
+- [Работа с магазином](/doc/docs/06-shop_management/)
+- [Интеграции PAYIN](/doc/payin/01-redirect_integration/)
+- [PAYIN: способы и API-примеры](/doc/payin/02-integration/)
+- [Интеграции PAYOUT](/doc/payout/01-integration/)
+- [PAYOUT: способы и API-примеры](/doc/payout/02-integration/)
+- [Ошибки и коды ответов](/doc/docs/02-api_error_guide/)
+- [PAYIN API](/doc/api/payin/01-overview/)
+- [PAYOUT API](/doc/api/payout/01-overview/)
+- [Shop API](/doc/api/shop/01-overview/)
+
+## Как читать документацию
+
+- Разделы `Интеграции` объясняют сценарий по шагам.
+- Разделы `способы и API-примеры` нужны, чтобы быстро запустить рабочие запросы.
+- Раздел `API` даёт reference по endpoint-ам.
+- Страница ошибок нужна отдельно: она описывает, когда можно ретраить запрос, а когда нельзя.

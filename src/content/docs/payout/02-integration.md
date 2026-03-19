@@ -1,729 +1,390 @@
 ---
-title: Интеграции PAYOUT
+title: "PAYOUT: способы и API-примеры"
+description: "Полные примеры payout-запросов, статусов и callback"
+tableOfContents: false
 ---
 
-## 1) База: URL и авторизация
+Эта страница собирает рабочие примеры для `payout` в `simple-pay`: получение trade methods, создание payout-ордеров, чтение, отмену, callback и служебные запросы, которые обычно нужны рядом с выплатами.
 
-**Авторизация:**
-- API-ключ магазина передаётся в заголовке:
-  - `Authorization: Bearer <shopApiKey>`
-- `shopApiKey` и `signatureKey` находятся в **деталях магазина**.
+## Переменные для примеров
 
-Пример заголовков:
 ```bash
---header 'Content-Type: application/json' \
---header 'Authorization: Bearer <SHOP_API_KEY>' \
+export BASE_URL="[[BASE_URL]]"
+export SHOP_TOKEN="<SHOP_API_KEY>"
+export BALANCE_TOKEN="<BALANCE_API_KEY>"
+export CALLBACK_URL="[[PAYOUT_CALLBACK_URL]]"
 ```
 
----
+## 1. Проверить баланс магазина
 
-## 2) Быстрый флоу PAYOUT
+Для payout это не обязательно перед каждым запросом, но практически полезно перед массовыми выплатами.
 
-### 2.1 Реквизиты
-1) Получите подходящий для клиента **trade method** и набор требуемых полей, вызвав API **Get trade methods (PAYOUT)**.  
-2) Заполните реквизиты клиента в `customer.requisites` по именам полей из `tradeMethod.fields[].name`, то есть:
-   - `customer.requisites[tradeMethod.fields[].name] = <значение>`
-
-### 2.2 Создание ордера
-1) Создайте payout-ордер через **Create payout order** (shop API), используя ваш `apiKey`.  
-2) Если вы указали `integration.callbackUrl`, дождитесь **callback/webhook** на вашем сервере при смене статуса ордера.
-
----
-
-## 3) Как узнать, какие способы выплаты доступны (trade methods)
-
-### 3.1 Получить методы PAYOUT для магазина
-**GET** `/shop/trade-methods/payout`
-
-Этот метод возвращает список доступных способов выплаты. Важные поля:
-- `paymentType` — тип выплаты (`sbp`, `card2card`, и т.д.)
-- `bank` / `bankName` — банк (если применимо)
-- `fiatCurrency` — валюта
-- `fields[]` — какие **реквизитные поля** нужны для этого метода, и какие из них обязательные (`required: true`)
-- `enabled` — включён ли метод
-
-Пример:
 ```bash
-curl --location 'https://example/public/api/v1/shop/trade-methods/payout' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>'
+curl --location "$BASE_URL/shop/assets" \
+  --header "Authorization: Bearer $BALANCE_TOKEN"
 ```
 
-### 3.2 Справочники (полезно для UI/валидации)
-- **GET** `/banks` — список банков (коды/названия)
-- **GET** `/payment-types` — список типов оплаты + их поля/форматы
-- **GET** `/currencies/fiat` — фиатные валюты
-- **GET** `/trade-methods` — общий список trade methods (публичный)
+### Пример ответа
 
----
-
-## 4) Создание PAYOUT ордера
-
-### 4.1 Эндпоинт
-**POST** `/shop/payout-orders`
-
-### 4.2 Минимально обязательные поля запроса
-Обязательные корневые поля:
-- `amount` (число > 0)
-- `currency` (строка, напр. `RUB`)
-- `customer` (объект)
-- `payment` (объект)
-
-Обязательные поля `customer`:
-- `customer.id`
-- `customer.requisites` (объект)
-
-Обязательные поля `payment`:
-- `payment.type`
-- `payment.bank` — **только если** это требуется выбранным trade method (смотрите `/shop/trade-methods/payout`)
-
-Опционально (рекомендуется):
-- `integration.externalOrderId` — ваш внешний ID заявки (уникальный)
-- `integration.callbackUrl` — ваш URL для callback
-- `integration.callbackMethod` — метод отправки callback (`post` по умолчанию)
-
----
-
-## 5) Callback/Webhook об изменении статуса
-
-### 5.1 Как выбрать HTTP-метод callback
-Чтобы выбрать HTTP-метод, укажите `integration.callbackMethod` при создании ордера.
-
-По умолчанию: **post**
-
-### 5.2 Какие данные приходят в callback
-При изменении статуса на ваш `callbackUrl` будет отправлен запрос с параметрами (примерно):
-- `id`
-- `amount`
-- `customerId`
-- `status`
-- `externalOrderId`
-- `statusDetails` (если есть)
-- `signature`
-
-Примеры (как это выглядит в параметрах):
-
-После смены статуса на **completed**:
-```text
-id=12345678&amount=1000&customerId=12345678&status=completed&externalOrderId=12345678&signature=12345678
+```json
+[
+  {
+    "id": "ff00d2c2-e50c-4dbb-a1f8-7d331aaae122",
+    "currency": "USDT",
+    "balance": 9192.59405,
+    "holdBalance": 50,
+    "shop": {
+      "id": "374e21dc-0fa7-42f8-b523-f95a8c0e9a2c",
+      "name": "simple-pay-demo"
+    }
+  }
+]
 ```
 
-После смены статуса на **cancelled**:
-```text
-id=12345678&amount=1000&customerId=12345678&status=cancelled&externalOrderId=12345678&statusDetails=shop&signature=12345678
-```
+Если средств недостаточно, `POST /shop/payout-orders` вернёт `S10001`.
 
-После смены статуса на **dispute**:
-```text
-id=12345678&amount=1000&customerId=12345678&status=dispute&externalOrderId=12345678&statusDetails=no_payment&signature=12345678
-```
+## 2. Получить доступные способы выплаты
 
-> Примечание: в подпись не включают `signature` (само поле подписи). Значения `null` в подписи пропускаются.
+Источник истины для payout-полей это `GET /shop/trade-methods/payout`.
 
----
+### Запрос
 
-## 6) Подпись callback (signature) — как проверить
-
-`signature` — это результат **sha1** от строки, собранной из значений всех параметров (кроме `signature`) **плюс** `signatureKey`.
-
-Правила:
-- берём все ключи payload + добавляем `signatureKey`
-- сортируем ключи **по алфавиту**
-- берём значения по отсортированным ключам
-- соединяем значения через символ `|`
-- значения `null` **не учитываем**
-- считаем `sha1` от получившейся строки
-
-`signatureKey` находится в деталях магазина.
-
-Пример (JS):
-```js
-const payload = {
-  id: order.id,
-  status: order.status,
-  amount: order.amount,
-  statusDetails: order.statusDetails,
-  customerId: order.customer.id,
-  externalOrderId: order.integration.externalOrderId,
-};
-
-const sortedSignatureKeys = sortBy([...keys(payload), 'signatureKey']);
-const stringToSign = map(sortedSignatureKeys, (key) => {
-  if (key === 'signatureKey') return signatureKey;
-  return payload[key];
-}).filter((v) => v !== null && v !== undefined).join('|');
-
-const signature = sha1(stringToSign);
-```
-
----
-
-## 7) Статусы PAYOUT ордера и рекомендации по обработке
-
-### 7.1 status (основные статусы)
-Доступные `status`:
-
-- `new` — создан
-- `requisites` — поиск/ожидание реквизитов (ожидание действий со стороны трейдера/системы)
-- `trader_accept` — принят трейдером (deprecated)
-- `trader_payment` — трейдер выполняет выплату (ожидание результата)
-- `rejected` — отклонён
-- `dispute` — спор
-- `completed` — выполнен (успешно завершён)
-- `cancelled` — отменён
-- `error` — ошибка (нужна поддержка)
-
-### 7.2 statusDetails (детализация статуса)
-Доступные `statusDetails`:
-
-- `payment_timeout` — истёк таймаут ожидания выполнения выплаты
-- `invalid_requisites` — некорректные реквизиты
-- `payment_failed` — выплата не прошла/завершилась ошибкой
-- `revert_cancelled` — ордер восстановлен из статуса «cancelled» для дальнейшей обработки
-- `admin_created` — ордер создан администратором
-- `dispute_verify` — требуется дополнительная проверка администратором
-- `different_amount` — сумма выплаты отличалась/была изменена
-- `dispute_automation_failed` — автоматизация спора не сработала
-- `dispute_unexpected` — неожиданный спор/нестандартная причина
-- `shop` — действие/отмена со стороны магазина
-- `admin` — действие/отмена со стороны администратора
-- `requisites_timeout` — таймаут поиска реквизитов
-- `max_rejects_exceeded` — превышено максимальное количество отказов
-- `operator` — действие/решение оператора
-- `accept_timeout` — таймаут принятия ордера
-- `no_funds` — недостаточно средств
-- `requisites_blocked` — реквизиты заблокированы
-- `payment_impossible` — выплата невозможна
-- `revert_dispute` — ордер возвращён из спора в обработку
-- `automation_reject` — отклонено автоматикой
-- `hold` — ордер на удержании (hold)
-
-Практика обработки:
-- Считайте ордер **финальным**, когда он в `completed` или `cancelled` (в зависимости от вашей бизнес-логики).
-- `error` — как правило, требует эскалации в поддержку.
-- При `rejected`/`dispute` ориентируйтесь на `statusDetails` и внутренний процесс (кто и как подтверждает/отклоняет).
-
----
-
-## 8) Способы выплаты (payment.type): обязательные поля + рабочие примеры запросов
-
-> ВАЖНО: реальная обязательность полей зависит от **trade method**.  
-> Перед интеграцией всегда делайте: **GET `/shop/trade-methods/payout`** и смотрите `fields[].required`.
-
-Ниже — шаблоны запросов, которые проходят базовую валидацию API (формат/структура).  
-Если конкретный метод/банк сейчас недоступен — вы можете получить бизнес-ошибку (например `O10005`).
-
-### 8.1 SBP (`sbp`) — перевод по номеру телефона
-
-Обязательные:
-- `customer.requisites.phone`
-
-**SBP без банка (если метод не требует bank):**
 ```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 55,
+curl --location "$BASE_URL/shop/trade-methods/payout" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
+
+### Пример ответа
+
+```json
+[
+  {
+    "bank": "sberbank",
+    "bankName": "Sberbank",
+    "fiatCurrency": "RUB",
+    "fiatCurrencySymbol": "₽",
+    "fiatCurrencySymbolPosition": "after",
+    "paymentType": "sbp",
+    "paymentTypeName": "СБП",
+    "fields": [
+      { "type": "phone", "name": "phone", "required": true, "primary": true }
+    ],
+    "customerFields": [],
+    "parallelGroupOrdersEnabled": false,
+    "compareCardLast4DigitsEnabled": false,
+    "compareAccountLast4DigitsEnabled": false,
+    "compareUTREnabled": false,
+    "enabled": true,
+    "deeplinks": []
+  },
+  {
+    "bank": "tbank",
+    "bankName": "T-Bank",
+    "fiatCurrency": "RUB",
+    "fiatCurrencySymbol": "₽",
+    "fiatCurrencySymbolPosition": "after",
+    "paymentType": "card2card",
+    "paymentTypeName": "Перевод с карты на карту",
+    "fields": [
+      { "type": "card", "name": "cardInfo", "required": true, "primary": true },
+      { "type": "holder", "name": "cardholder", "required": false }
+    ],
+    "customerFields": [],
+    "parallelGroupOrdersEnabled": false,
+    "compareCardLast4DigitsEnabled": false,
+    "compareAccountLast4DigitsEnabled": false,
+    "compareUTREnabled": false,
+    "enabled": true,
+    "deeplinks": []
+  }
+]
+```
+
+### Как использовать ответ
+
+- `paymentType` и `bank` определяют доступный payout route.
+- `fields[]` определяет, какие поля нужно заполнить в `customer.requisites`.
+- если банк не обязателен, можно не передавать `payment.bank`.
+
+## 3. Создать payout: SBP
+
+### Запрос
+
+```bash
+curl --location "$BASE_URL/shop/payout-orders" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer $SHOP_TOKEN" \
+  --data '{
+    "amount": 1200,
     "currency": "RUB",
     "customer": {
-      "id": "#payout-001",
-      "name": "Иванов Иван",
-      "email": "ivan@test-client.com",
+      "id": "payout-10001",
+      "name": "Ivan Ivanov",
+      "email": "buyer@example.com",
+      "phone": "+79990001122",
       "requisites": {
-        "phone": "+791270271111"
+        "phone": "+79990001122"
       }
     },
     "payment": {
-      "type": "sbp"
+      "type": "sbp",
+      "bank": "sberbank"
     },
     "integration": {
-      "externalOrderId": "payout-001",
-      "callbackUrl": "https://merchant.example.com/tapbank/payout-callback",
+      "externalOrderId": "merchant-payout-10001",
+      "callbackUrl": "[[PAYOUT_CALLBACK_URL]]",
       "callbackMethod": "post"
     }
   }'
 ```
 
-**SBP + bank:**
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 55,
-    "currency": "RUB",
-    "customer": {
-      "id": "#payout-002",
-      "requisites": {
-        "phone": "+791270271111"
-      }
-    },
-    "payment": {
-      "type": "sbp",
-      "bank": "vtb"
-    },
-    "integration": {
-      "externalOrderId": "payout-002"
+### Пример ответа
+
+```json
+{
+  "id": "b4ad11f1-10b3-4684-8fe4-2d6f3969e77a",
+  "amount": 1200,
+  "currency": "RUB",
+  "status": "requisites",
+  "statusDetails": null,
+  "shop": {
+    "name": "simple-pay-demo"
+  },
+  "payment": {
+    "type": "sbp",
+    "bank": "sberbank"
+  },
+  "customer": {
+    "id": "payout-10001",
+    "name": "Ivan Ivanov",
+    "email": "buyer@example.com",
+    "telegram": null,
+    "requisites": {
+      "phone": "+79990001122",
+      "card": null,
+      "cardholder": null,
+      "swiftBic": null,
+      "bic": null,
+      "idCard": null,
+      "beneficiaryName": null,
+      "accountNumber": null,
+      "expirationDate": null,
+      "taxId": null
     }
-  }'
+  },
+  "assetCurrencyAmount": 12,
+  "shopAmount": 12.12,
+  "shopFee": 0.12,
+  "currencyRate": 100,
+  "integration": {
+    "externalOrderId": "merchant-payout-10001",
+    "callbackUrl": "[[PAYOUT_CALLBACK_URL]]",
+    "callbackMethod": "post",
+    "callbackUrlStatus": "in_progress"
+  }
+}
 ```
 
----
+## 4. Создать payout: Card2Card без явного банка
 
-### 8.2 Card2Card (`card2card`) — перевод на карту
+Для `card2card` можно не передавать `payment.bank`. В этом случае сервис попробует определить банк по BIN карты.
 
-Обязательные (обычно):
-- `customer.requisites.cardInfo`
-- иногда `customer.requisites.cardholder` (смотрите trade method)
+### Запрос
 
-**Card2Card без банка:**
 ```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 2500,
+curl --location "$BASE_URL/shop/payout-orders" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer $SHOP_TOKEN" \
+  --data '{
+    "amount": 2300,
     "currency": "RUB",
     "customer": {
-      "id": "#c2c-001",
+      "id": "payout-10002",
+      "name": "Ivan Ivanov",
       "requisites": {
-        "cardInfo": "4111111111111111",
-        "cardholder": "IVAN IVANOV",
-        "expirationDate": "12/28"
+        "cardInfo": "2200702202207788",
+        "cardholder": "IVAN IVANOV"
       }
     },
     "payment": {
       "type": "card2card"
     },
     "integration": {
-      "externalOrderId": "payout-c2c-001"
+      "externalOrderId": "merchant-payout-10002",
+      "callbackUrl": "[[PAYOUT_CALLBACK_URL]]",
+      "callbackMethod": "post"
     }
   }'
 ```
 
-**Card2Card + bank (если требуется конкретным методом):**
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 2500,
-    "currency": "RUB",
-    "customer": {
-      "id": "#c2c-002",
-      "requisites": {
-        "cardInfo": "4111111111111111",
-        "cardholder": "IVAN IVANOV",
-        "expirationDate": "12/28"
-      }
-    },
-    "payment": {
-      "type": "card2card",
-      "bank": "vtb"
-    },
-    "integration": {
-      "externalOrderId": "payout-c2c-002"
-    }
-  }'
-```
+### Пример ответа
 
----
-
-### 8.3 SIM (`sim`) — перевод/пополнение по номеру телефона
-
-Обязательные (обычно):
-- `customer.requisites.phone`
-
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 300,
-    "currency": "RUB",
-    "customer": {
-      "id": "#sim-001",
-      "requisites": {
-        "phone": "+79991234567"
-      }
-    },
-    "payment": {
-      "type": "sim"
-    },
-    "integration": {
-      "externalOrderId": "payout-sim-001"
-    }
-  }'
-```
-
----
-
-### 8.4 Phone number (`phone_number`) — перевод по номеру телефона
-
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 100,
-    "currency": "RUB",
-    "customer": {
-      "id": "#phone-001",
-      "requisites": {
-        "phone": "+79990001122"
-      }
-    },
-    "payment": {
-      "type": "phone_number"
-    },
-    "integration": {
-      "externalOrderId": "payout-phone-001"
-    }
-  }'
-```
-
----
-
-### 8.5 UPI (`upi`) — перевод по UPI ID
-
-Обязательные (обычно):
-- `customer.requisites.accountNumber` (UPI ID)
-
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 500,
-    "currency": "INR",
-    "customer": {
-      "id": "#upi-001",
-      "requisites": {
-        "accountNumber": "name@upi",
-        "beneficiaryName": "Ivan Ivanov"
-      }
-    },
-    "payment": {
-      "type": "upi"
-    },
-    "integration": {
-      "externalOrderId": "payout-upi-001"
-    }
-  }'
-```
-
----
-
-### 8.6 IMPS (`imps`) — перевод по счёту + IFSC
-
-Обязательные (обычно):
-- `customer.requisites.accountNumber`
-- `customer.requisites.swiftBic` (IFSC)
-- `customer.requisites.beneficiaryName`
-
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 1200,
-    "currency": "INR",
-    "customer": {
-      "id": "#imps-001",
-      "requisites": {
-        "accountNumber": "1234567890",
-        "swiftBic": "HDFC0000001",
-        "beneficiaryName": "IVAN IVANOV"
-      }
-    },
-    "payment": {
-      "type": "imps"
-    },
-    "integration": {
-      "externalOrderId": "payout-imps-001"
-    }
-  }'
-```
-
----
-
-### 8.7 Bank transfer (`account_number`) — перевод на банковский счёт
-
-Обязательные (обычно):
-- `customer.requisites.accountNumber`
-- дополнительные поля зависят от метода/страны (bic/taxId/beneficiaryName)
-
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 1500,
-    "currency": "RUB",
-    "customer": {
-      "id": "#acc-001",
-      "requisites": {
-        "accountNumber": "40817810099910004312",
-        "bic": "044525225",
-        "taxId": "7707083893",
-        "beneficiaryName": "Иванов Иван"
-      }
-    },
-    "payment": {
-      "type": "account_number"
-    },
-    "integration": {
-      "externalOrderId": "payout-acc-001"
-    }
-  }'
-```
-
----
-
-### 8.8 IBAN (`account_number_iban`) — перевод на IBAN
-
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 100,
-    "currency": "EUR",
-    "customer": {
-      "id": "#iban-001",
-      "requisites": {
-        "accountNumber": "DE89370400440532013000",
-        "beneficiaryName": "IVAN IVANOV"
-      }
-    },
-    "payment": {
-      "type": "account_number_iban"
-    },
-    "integration": {
-      "externalOrderId": "payout-iban-001"
-    }
-  }'
-```
-
----
-
-### 8.9 Международные варианты: `tsbp` и `tcard2card`
-
-> Эти типы могут быть доступны в зависимости от настроек магазина.  
-> Обязательные поля уточняйте через `/shop/trade-methods/payout`.
-
-**TSBP:**
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 55,
-    "currency": "RUB",
-    "customer": {
-      "id": "#tsbp-001",
-      "requisites": {
-        "phone": "+791270271111"
-      }
-    },
-    "payment": {
-      "type": "tsbp",
-      "bank": "vtb"
-    },
-    "integration": {
-      "externalOrderId": "payout-tsbp-001"
-    }
-  }'
-```
-
-**TCARD2CARD:**
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 2500,
-    "currency": "RUB",
-    "customer": {
-      "id": "#tc2c-001",
-      "requisites": {
-        "cardInfo": "4111111111111111",
-        "cardholder": "IVAN IVANOV",
-        "expirationDate": "12/28"
-      }
-    },
-    "payment": {
-      "type": "tcard2card"
-    },
-    "integration": {
-      "externalOrderId": "payout-tc2c-001"
-    }
-  }'
-```
-
----
-
-### 8.10 NSPK (`nspk`) — если доступно в PAYOUT
-
-В PAYOUT-схеме реквизитов нет полей вида `qrManagerApiKey/qrManagerLogin` (они встречаются в PAYIN).  
-Если `nspk` действительно доступен в PAYOUT для вашего магазина, ориентируйтесь на **GET `/shop/trade-methods/payout`** и заполняйте только те поля, которые вернулись в `fields[].name`.
-
-Шаблон (структурно валиден, но поля нужно уточнить по trade method):
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders' \
-  --header 'Content-Type: application/json' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>' \
-  --data-raw '{
-    "amount": 55,
-    "currency": "RUB",
-    "customer": {
-      "id": "#nspk-001",
-      "requisites": {}
-    },
-    "payment": {
-      "type": "nspk"
-    },
-    "integration": {
-      "externalOrderId": "payout-nspk-001"
-    }
-  }'
-```
-
----
-
-## 9) Получение/отмена ордера (PAYOUT)
-
-### 9.1 Получить ордер по id
-**GET** `/shop/payout-orders/<built-in function id>`
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders/<ORDER_ID>' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>'
-```
-
-### 9.2 Получить ордер по externalOrderId
-**GET** `/shop/payout-orders/external/<built-in function id>`
-```bash
-curl --location 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders/external/<EXTERNAL_ORDER_ID>' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>'
-```
-
-### 9.3 Отменить ордер
-**POST** `/shop/payout-orders/<built-in function id>/cancel`
-```bash
-curl --location --request POST 'https://dev1.tapbank.net/public/api/v1/shop/payout-orders/<ORDER_ID>/cancel' \
-  --header 'Authorization: Bearer <SHOP_API_KEY>'
-```
-
----
-
-## 10) Ошибки: формат и что делать
-
-### 10.1 Бизнес-ошибка (workflow error) — пример
 ```json
 {
-  "error": "Bad Request",
-  "errorCode": "S10000",
-  "errorMessage": "Shop is inactive",
-  "statusCode": 400
-}
-```
-
-Что делать:
-- смотреть `errorCode`,
-- сопоставить с таблицей ниже,
-- исправить параметры/условия или эскалировать в поддержку.
-
-### 10.2 Ошибка валидации (validation error) — пример
-```json
-{
-  "statusCode": 400,
-  "error": "Bad Request",
-  "message": {
-    "property": "amount",
-    "constraints": {
-      "isPositive": "amount must be a positive number"
+  "id": "52272fa2-e68d-42c1-a92e-4e72f2a5b9e1",
+  "amount": 2300,
+  "currency": "RUB",
+  "status": "requisites",
+  "payment": {
+    "type": "card2card",
+    "bank": "tbank"
+  },
+  "customer": {
+    "id": "payout-10002",
+    "name": "Ivan Ivanov",
+    "requisites": {
+      "card": "2200702202207788",
+      "cardholder": "IVAN IVANOV"
     }
+  },
+  "integration": {
+    "externalOrderId": "merchant-payout-10002",
+    "callbackUrlStatus": "in_progress"
   }
 }
 ```
 
-Что делать:
-- исправить структуру/значения запроса,
-- свериться с обязательными полями из `/shop/trade-methods/payout`.
+## 5. Чтение payout-ордеров
 
-### 10.3 Коды ошибок и рекомендации
-- **S10000** — Магазин неактивен
-- **S10001** — Недостаточно средств на балансе магазина
-- **S10002** — Превышен таймаут ответа согласно настройкам магазина
-- **O10000** — Заказ в неподходящем статусе для выполнения действия
-- **O10001** — Не выбран банк или тип оплаты для запуска процесса
-- **O10002** — Слишком много активных заказов у одного клиента (лимиты уточните у поддержки)
-- **O10003** — Заказ не найден
-- **O10004** — Некорректная сумма заказа (проверьте лимиты в настройках магазина)
-- **O10005** — Сейчас нет доступных реквизитов для выбранного типа оплаты и банка
-- **O10006** — Заказ с таким externalOrderId уже существует
-- **O10007** — Найдено больше одного заказа с одинаковым externalOrderId (обратитесь в поддержку)
-- **O10008** — Клиент заблокирован антифрод-системой (попробуйте позже)
-- **O10009** — Клиент не в whitelist
-- **O10010** — Сумма заказа запрещена антифрод-системой
-- **C10000** — Не удалось получить курс обмена валют
-- **C10001** — Валюта не найдена
-- **B10000** — Банк не найден
-- **P10000** — Тип оплаты не найден
-- **T10000** — Торговый метод не найден
+### Получить ордер по ID
 
----
+```bash
+curl --location "$BASE_URL/shop/payout-orders/b4ad11f1-10b3-4684-8fe4-2d6f3969e77a" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
 
-## 11) Работа с магазином: что можно делать по API (шаблон)
+### Получить ордер по `externalOrderId`
 
-Ниже — основной список shop-запросов, которые чаще всего нужны мерчанту:
+```bash
+curl --location "$BASE_URL/shop/payout-orders/external/merchant-payout-10001" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
 
-### PAYIN (депозиты / приём платежей)
-- **POST** `/shop/orders` — создать payin-ордер
-- **POST** `/shop/orders/sync-requisites` — получить/синхронизировать реквизиты для payin
-- **GET** `/shop/orders/<built-in function id>` — получить ордер
-- **POST** `/shop/orders/<built-in function id>/cancel` — отменить
-- **POST** `/shop/orders/<built-in function id>/start-payment` — начать оплату (если используется)
-- **POST** `/shop/orders/<built-in function id>/confirm-payment` — подтвердить оплату (если используется)
-- **/receipts, /dispute** — работа с чеками/спорами (если включено в процессе)
+### Получить список payout-ордеров
 
-### PAYOUT (выплаты)
-- **GET** `/shop/trade-methods/payout` — доступные методы выплат
-- **POST** `/shop/payout-orders` — создать payout-ордер
-- **GET** `/shop/payout-orders/<built-in function id>` — получить payout-ордер
-- **GET** `/shop/payout-orders/external/<built-in function id>` — получить по externalOrderId
-- **POST** `/shop/payout-orders/<built-in function id>/cancel` — отменить payout
+```bash
+curl --location "$BASE_URL/shop/payout-orders?from=2026-03-01&to=2026-03-14&status=completed&take=50&page=1" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
 
-### Балансы/активы магазина
-- **GET** `/shop/assets` — активы и балансы магазина
-- **POST** `/shop/assets/withdrawals` — создать заявку на вывод (withdrawal) со счета магазина
-- **GET** `/shop/assets/withdrawals/<built-in function id>` — получить заявку на вывод по id
+### Пример ответа списка
 
-### Справочники
-- **GET** `/banks`
-- **GET** `/payment-types`
-- **GET** `/currencies/fiat`
-- **GET** `/currencies/asset`
-- **GET** `/trade-methods`
+```json
+{
+  "items": [
+    {
+      "id": "b4ad11f1-10b3-4684-8fe4-2d6f3969e77a",
+      "amount": 1200,
+      "currency": "RUB",
+      "status": "completed",
+      "statusDetails": null,
+      "payment": {
+        "type": "sbp",
+        "bank": "sberbank"
+      },
+      "customer": {
+        "id": "payout-10001"
+      },
+      "integration": {
+        "externalOrderId": "merchant-payout-10001",
+        "callbackUrlStatus": "success"
+      }
+    }
+  ],
+  "page": 1,
+  "pages": 1,
+  "count": 1
+}
+```
 
----
+## 6. Отменить payout-ордер
 
-## 12) Доп функции (каркас для будущих страниц)
+Отмена работает только в допустимых статусах. Если статус уже ушёл дальше, API вернёт `O10000`.
 
-Этот раздел — **заготовка**, сюда можно добавлять:
-- антифрод (лимиты, причины блокировок, ретраи),
-- рандомизацию/распределение (если применяется в вашей схеме),
-- SLA по статусам и спорам,
-- требования к данным (email/telegram), правила нормализации телефона и т.п.
+### Запрос
 
----
+```bash
+curl --location --request POST "$BASE_URL/shop/payout-orders/b4ad11f1-10b3-4684-8fe4-2d6f3969e77a/cancel" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
+```
 
-## 13) Чек‑лист интеграции (коротко)
+### Пример ответа
 
-- [ ] Перед созданием payout вы получаете `/shop/trade-methods/payout` и используете **актуальные required поля**
-- [ ] Валидируете сумму/валюту до отправки
-- [ ] Используете уникальный `integration.externalOrderId`
-- [ ] Принимаете callback, проверяете `signature`, логируете входящие события
-- [ ] Умеете читать ордер по `id` и по `externalOrderId`
-- [ ] Корректно закрываете финальные статусы (`completed`/`cancelled`) и обрабатываете `error`
+```json
+{
+  "id": "b4ad11f1-10b3-4684-8fe4-2d6f3969e77a",
+  "amount": 1200,
+  "currency": "RUB",
+  "status": "cancelled",
+  "statusDetails": "shop",
+  "payment": {
+    "type": "sbp",
+    "bank": "sberbank"
+  },
+  "integration": {
+    "externalOrderId": "merchant-payout-10001",
+    "callbackUrlStatus": "in_progress"
+  }
+}
+```
 
+## 7. Как выглядит payout callback
+
+Payout callback работает по той же модели, что и payin:
+
+- параметры статуса передаются в query string;
+- при `callbackMethod=post` тело запроса пустое;
+- callback может быть отправлен повторно;
+- подпись проверяется через `signatureKey`.
+
+### Пример callback
+
+```text
+[[PAYOUT_CALLBACK_URL]]?id=b4ad11f1-10b3-4684-8fe4-2d6f3969e77a&amount=1200&customerId=payout-10001&status=completed&externalOrderId=merchant-payout-10001&signature=5ce1...
+```
+
+### Пример callback при отмене
+
+```text
+[[PAYOUT_CALLBACK_URL]]?id=b4ad11f1-10b3-4684-8fe4-2d6f3969e77a&amount=1200&customerId=payout-10001&status=cancelled&statusDetails=shop&externalOrderId=merchant-payout-10001&signature=18aa...
+```
+
+## 8. Дополнительные запросы, которые часто нужны рядом с payout
+
+### Создать заявку на вывод средств магазина
+
+Если payout-процесс связан с балансом магазина, может понадобиться ручное управление средствами:
+
+```bash
+curl --location "$BASE_URL/shop/assets/withdrawals" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer $BALANCE_TOKEN" \
+  --data '{
+    "withdrawAmount": 25,
+    "address": "TRC20_WALLET_ADDRESS"
+  }'
+```
+
+### Получить информацию по заявке на вывод
+
+```bash
+curl --location "$BASE_URL/shop/assets/withdrawals/9aa52b42-3cb7-402a-b655-0753e246ece8" \
+  --header "Authorization: Bearer $BALANCE_TOKEN"
+```
+
+## 9. Тонкости работы PAYOUT API
+
+- Успешный `201` после `POST /shop/payout-orders` означает только принятие payout в обработку.
+- Нормальный рабочий статус после создания это `requisites`.
+- Для `card2card` банк может быть подставлен автоматически по BIN карты.
+- Если в payout пришёл `rejected`, не закрывайте бизнес-операцию автоматически, сначала дочитайте ордер ещё раз.
+- После `S10002` сначала ищите payout по `externalOrderId`.
+- `callbackUrlStatus` удобно использовать как технический индикатор успешной доставки callback.
+
+## 10. Что смотреть дальше
+
+- [Интеграции PAYOUT](/doc/payout/01-integration/)
+- [PAYOUT API: создание и список ордеров](/doc/api/payout/02-orders/)
+- [PAYOUT API: чтение и отмена](/doc/api/payout/03-read-and-cancel/)
+- [Работа с магазином](/doc/docs/06-shop_management/)
+- [Ошибки и коды ответов](/doc/docs/02-api_error_guide/)
