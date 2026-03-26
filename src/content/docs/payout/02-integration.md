@@ -104,7 +104,32 @@ curl --location "$BASE_URL/shop/trade-methods/payout" \
 
 - `paymentType` и `bank` определяют доступный payout route.
 - `fields[]` определяет, какие поля нужно заполнить в `customer.requisites`.
-- если банк не обязателен, можно не передавать `payment.bank`.
+- `fields[].required=true` означает, что поле обязательно для выбранного метода.
+- `customerFields[]` в ответе trade methods для `POST /shop/payout-orders` не отправляются, используйте только `fields[]`.
+- `payment.bank` обычно обязателен; для `card2card` его можно не передавать, сервис попробует определить банк по BIN карты.
+
+### Типовые payout methods и обязательные поля
+
+Точный набор методов всегда проверяйте через `GET /shop/trade-methods/payout`. Ниже приведён дефолтный mapping для методов, которые поддерживает текущая public payout схема.
+
+| `payment.type` | Обязательные поля в `customer.requisites` | Требования к обязательным полям |
+| --- | --- | --- |
+| `sbp`<br />`sberpay`<br />`tsbp` | `phone` | `phone`:<br />строка длиной от `7` до `16` символов |
+| `card2card`<br />`tcard2card` | `cardInfo` | `cardInfo`:<br />только цифры<br />длина от `16` до `19` символов |
+| `account_number`<br />`account_number_iban`<br />`upi`<br />`erip` | `accountNumber` | `accountNumber`:<br />строка<br />дополнительной валидации public DTO нет |
+| `account_number_sepa` | `accountNumber`<br />`cardholder`<br />`swiftBic` | `accountNumber`:<br />строка<br /><br />`cardholder`:<br />строка до `200` символов<br /><br />`swiftBic`:<br />строка |
+| `phone_number`<br />`sim` | `phone` | `phone`:<br />строка длиной от `7` до `16` символов |
+| `transfer_via_id_card` | `idCard` | `idCard`:<br />строка<br />дополнительной валидации public DTO нет |
+| `imps` | `accountNumber`<br />`swiftBic`<br />`cardholder` | `accountNumber`:<br />строка<br /><br />`swiftBic`:<br />строка<br /><br />`cardholder`:<br />строка до `200` символов |
+| `phone_pe` | `phone`<br />`accountNumber` | `phone`:<br />строка длиной от `7` до `16` символов<br /><br />`accountNumber`:<br />строка |
+
+### Дополнительно
+
+| Поле | Что важно |
+| --- | --- |
+| `cardInfo` | в request используйте `customer.requisites.cardInfo` |
+| `card` | в response это же значение приходит как `customer.requisites.card` |
+| `accountNumber`, `swiftBic`, `bic`, `idCard`, `beneficiaryName`, `expirationDate`, `taxId` | строки без дополнительной public DTO валидации |
 
 ## 3. Создать payout: SBP
 
@@ -121,7 +146,6 @@ curl --location "$BASE_URL/shop/payout-orders" \
       "id": "payout-10001",
       "name": "Ivan Ivanov",
       "email": "buyer@example.com",
-      "phone": "+79990001122",
       "requisites": {
         "phone": "+79990001122"
       }

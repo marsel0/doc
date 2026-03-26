@@ -1,274 +1,114 @@
 ---
-title: "Интеграции PAYIN"
-description: "Подробные сценарии PAYIN: redirect, H2H и Customer API"
+title: "PAYIN: обзор для магазина"
+description: "Как выбрать сценарий, как живёт ордер и что важно магазину"
 ---
 
-Эта страница описывает рабочие сценарии `payin` в `simple-pay`: когда использовать redirect, когда выбирать H2H и в каких случаях подключать `Customer API`.
+Эта страница описывает `payin` только с точки зрения магазина: какой сценарий выбрать, как проходит ордер, что считать финалом и какие данные важно сохранять у себя.
 
-Для готовых `curl`-примеров и типовых ответов используйте страницу [PAYIN: способы и API-примеры](/doc/payin/02-integration/).
+За сценарными `curl`-примерами идите в [PAYIN: сценарии и curl-примеры](/doc/payin/02-integration/). За полным reference по merchant endpoint-ам идите в [PAYIN API](/doc/api/payin/01-overview/).
 
-## 1. Какие варианты интеграции есть
+## 1. С чего начать
+
+### Минимальный маршрут интеграции
+
+1. Проверить доступ магазина и `signatureKey` через [Shop API](/doc/api/shop/01-overview/).
+2. Прочитать `GET /shop/trade-methods`.
+3. Выбрать один из трёх payin-сценариев.
+4. Передавать уникальный `integration.externalOrderId`.
+5. Подключить callback и оставить `GET /shop/orders/{id}` или `GET /shop/orders/external/{externalOrderId}` как резервный канал контроля.
+
+### Какой сценарий выбрать
+
+| Сценарий | Когда использовать | Ключевые endpoint-ы |
+| --- | --- | --- |
+| `Redirect` | Нужен самый быстрый запуск, а UI можно отдать платформе | `POST /shop/orders` |
+| `H2H sync` | Метод оплаты известен заранее и реквизиты нужны сразу | `POST /shop/orders/sync-requisites` |
+| `H2H step-by-step` | Метод и банк клиент выбирает уже после создания ордера | `POST /shop/orders` -> `PATCH /shop/orders/{id}` -> `POST /shop/orders/{id}/start-payment` |
+
+## 2. Как проходит PAYIN
 
 ### Redirect
 
-Клиент создаёт ордер на вашей стороне, после чего вы переводите его на `integration.link`.
+1. Магазин создаёт ордер через `POST /shop/orders`.
+2. Получает `integration.link`.
+3. Переводит клиента на платёжную страницу.
+4. Ждёт callback или читает ордер по `GET`.
 
-Подходит, если:
+### H2H с реквизитами сразу
 
-- платёжная форма может быть размещена у `simple-pay`;
-- вам не нужно рендерить реквизиты самостоятельно;
-- нужен минимальный time-to-market.
+1. Магазин читает `GET /shop/trade-methods`.
+2. Создаёт ордер через `POST /shop/orders/sync-requisites`.
+3. Сразу получает `requisites` или `404/O10005`.
+4. После оплаты вызывает `POST /shop/orders/{id}/confirm-payment`.
 
-### H2H с немедленной выдачей реквизитов
+### H2H по шагам
 
-Клиент остаётся на вашем интерфейсе, а реквизиты возвращаются сразу в ответе `POST /shop/orders/sync-requisites`.
+1. Магазин создаёт базовый ордер через `POST /shop/orders`.
+2. В статусе `new` записывает `payment.type` и `payment.bank`.
+3. Вызывает `POST /shop/orders/{id}/start-payment`.
+4. Ждёт `customer_confirm`, показывает реквизиты и после оплаты вызывает `confirm-payment`.
 
-Подходит, если:
+## 3. Как живёт ордер
 
-- вы хотите полностью контролировать UI;
-- `payment.type` известен до создания ордера;
-- реквизиты нужно показать сразу после создания.
+### Что делает магазин
 
-Это основной H2H-сценарий для `payin`.
+- передаёт `amount`, `currency` и `customer.id`;
+- использует уникальный `integration.externalOrderId`;
+- перед H2H читает `GET /shop/trade-methods`;
+- показывает клиенту `amount` и `requisites` из ответа;
+- вызывает `confirm-payment`, когда клиент реально оплатил;
+- отменяет ордер, если платёж больше не нужен;
+- при необходимости открывает и закрывает `dispute`.
 
-### H2H с ручным управлением шагами
+### Что делает платформа
 
-Ордер создаётся заранее, а выбор метода оплаты и запуск поиска реквизитов происходят позже.
+- подбирает реквизиты;
+- двигает ордер по статусам;
+- отправляет callback;
+- закрывает ордер по timeout;
+- переводит спорные кейсы в `dispute`.
 
-Используется, если:
+### Что считается финалом
 
-- вы хотите сначала создать ордер, а потом дать клиенту выбрать банк и метод;
-- для одного ордера возможны разные способы оплаты;
-- нужен пошаговый UX с отдельными экранами выбора и подтверждения.
+- `completed`
+- `cancelled`
+- `dispute`
+- `error`
 
-### Customer API
+Промежуточные статусы и все поля ордера описаны в [PAYIN API: обзор](/doc/api/payin/01-overview/).
 
-Customer API не создаёт ордеры, но позволяет безопасно отдавать клиенту часть дальнейших действий.
+## 4. Что хранить у себя
 
-Он нужен, если frontend должен сам:
+### Идентификаторы и суммы
 
-- читать состояние ордера;
-- обновлять payment-данные;
-- запускать `start-payment` или `confirm-payment`;
-- отменять ордер.
+- внутренний `id` ордера;
+- ваш `integration.externalOrderId`;
+- `initialAmount` и фактический `amount`;
+- выбранные `payment.type` и `payment.bank`, если вы строите H2H flow.
 
-## 2. Сценарий Redirect PAYIN
+### Статус и доставка callback
 
-### Шаг 1. Создать ордер
+- `status`;
+- `statusDetails`;
+- `statusTimeoutAt`;
+- `integration.callbackUrlStatus`.
 
-Вызовите `POST /shop/orders`.
+Если create-запрос закончился `S10002`, не создавайте новый ордер вслепую: сначала ищите его по `externalOrderId`.
 
-В ответе вы получите:
+## 5. Что важно
 
-- `id` ордера;
-- `integration.link` для перехода на платёжную страницу;
-- `integration.token`, который можно использовать в `Customer API`;
-- `amount` и `initialAmount`.
+- Магазин не ставит статусы вручную, а вызывает endpoint-ы.
+- В H2H не хардкодьте поля реквизитов: ориентируйтесь на `GET /shop/trade-methods`.
+- Показывайте клиенту `amount`, а не только `initialAmount`.
+- После `S10002` сначала дочитайте ордер по `externalOrderId`.
+- Callback-обработчик должен быть идемпотентным.
+- В merchant API `dispute` открывается по уже отменённому ордеру.
 
-### Шаг 2. Перенаправить клиента
+## 6. Куда идти дальше
 
-Откройте в браузере клиента `integration.link`.
-
-Если у ордера настроены `returnUrl`, `successUrl`, `failUrl`, платформа будет использовать их для возврата после завершения пользовательского сценария.
-
-### Шаг 3. Получить итоговый статус
-
-Основной способ:
-
-1. принять callback на `integration.callbackUrl`;
-2. проверить `signature`;
-3. обновить статус платежа в своей системе.
-
-Резервный способ:
-
-- `GET /shop/orders/{id}`
-- `GET /shop/orders/external/{externalOrderId}`
-
-### Шаг 4. Обработать финал
-
-Финальными для мерчанта считаются:
-
-- `completed` , платёж успешен;
-- `cancelled` , платёж отменён;
-- `dispute` , нужен разбор;
-- `error` , технический кейс, нужен повторный контроль статуса и поддержка.
-
-## 3. Сценарий H2H PAYIN через `sync-requisites`
-
-### Шаг 1. Получить доступные методы
-
-Сначала вызовите `GET /shop/trade-methods`.
-
-По ответу определите:
-
-- доступный `paymentType`;
-- нужен ли конкретный `bank`;
-- какие поля система вернёт в `requisites`;
-- какие данные клиента желательно собрать заранее.
-
-### Шаг 2. Создать ордер с конкретным методом
-
-Вызовите `POST /shop/orders/sync-requisites`, передав:
-
-- сумму и валюту;
-- `customer.id`;
-- `payment.type`;
-- при необходимости `payment.bank`;
-- `integration.externalOrderId`;
-- `integration.callbackUrl`.
-
-Если реквизиты найдены, ордер обычно возвращается уже в статусе `customer_confirm`.
-
-Если реквизиты не найдены, API вернёт `404` с `errorCode = O10005` и снимком созданного ордера.
-
-### Шаг 3. Показать реквизиты клиенту
-
-Типовой набор полей в `requisites`:
-
-- `phone`
-- `cardInfo`
-- `bank`
-- `bankName`
-- `cardholder`
-- `paymentLink`
-- `rawQrCodeData`
-- `qrImageUrl`
-
-Набор зависит от конкретного trade method.
-
-### Шаг 4. Подтвердить факт оплаты
-
-Когда клиент завершил перевод, вызовите `POST /shop/orders/{id}/confirm-payment`.
-
-Если нужно, вместе с подтверждением можно передать дополнительные payment-данные:
-
-- `customerCardLastDigits`
-- `customerPhoneLastDigits`
-- `customerBank`
-- `customerName`
-- `customerUtr`
-- `customerIBAN`
-- `customerAccountNumber`
-
-После этого ордер обычно переходит в `trader_confirm`.
-
-### Шаг 5. Дождаться финала
-
-Дальше ориентируйтесь на callback или на чтение ордера по `GET`.
-
-## 4. Сценарий H2H PAYIN по шагам
-
-Этот флоу нужен, когда конкретный способ оплаты выбирается не в момент создания ордера.
-
-### Шаг 1. Создать базовый ордер
-
-Создайте ордер через `POST /shop/orders`.
-
-Ордер вернётся в статусе `new`.
-
-### Шаг 2. Записать выбранный метод оплаты
-
-Когда клиент выбрал метод и банк, вызовите:
-
-- `PATCH /shop/orders/{id}`
-
-Обычно здесь передают:
-
-- `payment.type`
-- `payment.bank`
-
-### Шаг 3. Запустить поиск реквизитов
-
-Вызовите:
-
-- `POST /shop/orders/{id}/start-payment`
-
-После этого статус меняется с `new` на `requisites`, а затем, когда реквизиты найдены, на `customer_confirm`.
-
-### Шаг 4. Собрать подтверждающие данные клиента
-
-Если сценарий требует доп. данные о переводе клиента, обновите ордер через `PATCH /shop/orders/{id}` уже в статусе `customer_confirm`.
-
-Примеры полей:
-
-- `payment.customerCardFirstDigits`
-- `payment.customerCardLastDigits`
-- `payment.customerPhoneLastDigits`
-- `payment.customerName`
-- `payment.customerBank`
-
-### Шаг 5. Подтвердить оплату
-
-Вызовите `POST /shop/orders/{id}/confirm-payment`.
-
-### Шаг 6. Отследить результат
-
-Ожидайте `completed`, `cancelled` или `dispute`.
-
-## 5. Когда нужен `Customer API`
-
-`Customer API` полезен, если вы не хотите проксировать с backend каждый шаг после создания ордера.
-
-### Как авторизоваться
-
-1. получить `orderId` и `integration.token` из ответа `POST /shop/orders`;
-2. вызвать `POST /customer/auth/login`;
-3. получить `accessToken`.
-
-Тонкости:
-
-- `accessToken` живёт `30` минут;
-- к завершённому ордеру доступ остаётся ещё `24` часа после финального статуса;
-- `Customer API` не умеет создавать ордер.
-
-### Что можно делать через Customer API
-
-- `GET /customer/orders/{id}`
-- `PATCH /customer/orders/{id}`
-- `POST /customer/orders/{id}/start-payment`
-- `POST /customer/orders/{id}/start-payment-sync`
-- `POST /customer/orders/{id}/confirm-payment`
-- `POST /customer/orders/{id}/cancel`
-
-`start-payment-sync` полезен для фронтовых сценариев, где реквизиты нужно получить синхронно уже после логина клиента в ордер.
-
-## 6. Статусы PAYIN
-
-| Статус | Что означает |
-| --- | --- |
-| `new` | ордер создан, но платёжный метод ещё не запущен |
-| `requisites` | идёт поиск реквизитов |
-| `customer_confirm` | реквизиты найдены, ждём оплату клиента |
-| `trader_confirm` | клиент подтвердил оплату, ждём подтверждение со стороны системы/трейдера |
-| `completed` | платёж успешно завершён |
-| `cancelled` | ордер отменён |
-| `dispute` | спорный кейс, нужен разбор |
-| `error` | техническая ошибка, нужен контроль через `GET` и поддержка |
-
-### Частые `statusDetails`
-
-- `shop` , ордер отменил магазин;
-- `customer` , ордер отменил клиент;
-- `new_timeout` , клиент не продолжил сценарий;
-- `requisites_timeout` , реквизиты не были найдены;
-- `sync_requisites_attempts` , исчерпаны попытки синхронного поиска;
-- `customer_confirm_timeout` , клиент не успел подтвердить оплату;
-- `no_payment` , диспут из-за отсутствия платежа;
-- `different_amount` , диспут из-за другой суммы.
-
-## 7. Практические рекомендации
-
-- Для любого create-запроса передавайте уникальный `integration.externalOrderId`.
-- После `S10002` не создавайте новый ордер вслепую, сначала ищите старый по `externalOrderId`.
-- В H2H показывайте клиенту именно `amount`, а не только `initialAmount`.
-- Не хардкодьте поля реквизитов: ориентируйтесь на `GET /shop/trade-methods`.
-- Callback-обработчик делайте идемпотентным.
-
-## 8. Что смотреть дальше
-
-- [PAYIN: способы и API-примеры](/doc/payin/02-integration/)
+- [PAYIN: сценарии и curl-примеры](/doc/payin/02-integration/)
 - [PAYIN API: создание и список ордеров](/doc/api/payin/02-orders/)
+- [PAYIN API: чтение ордеров](/doc/api/payin/03-read/)
 - [PAYIN API: действия над ордером](/doc/api/payin/04-actions/)
 - [PAYIN API: payment fields и receipts](/doc/api/payin/05-receipts-and-fields/)
 - [PAYIN API: dispute](/doc/api/payin/06-disputes/)
-- [Ошибки и коды ответов](/doc/docs/02-api_error_guide/)

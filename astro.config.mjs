@@ -15,7 +15,7 @@ export default defineConfig({
       customCss: ['./src/styles/global.css'],
       tableOfContents: {
         minHeadingLevel: 2,
-        maxHeadingLevel: 2,
+        maxHeadingLevel: 3,
       },
       sidebar: [
         {
@@ -31,8 +31,8 @@ export default defineConfig({
         {
           label: 'Payin',
           items: [
-            { label: 'Интеграции PAYIN', link: '/payin/01-redirect_integration/' },
-            { label: 'PAYIN: способы и API-примеры', link: '/payin/02-integration/' },
+            { label: 'PAYIN: обзор и логика', link: '/payin/01-redirect_integration/' },
+            { label: 'PAYIN: сценарии и curl-примеры', link: '/payin/02-integration/' },
             {
               label: 'PAYIN API',
               items: [
@@ -42,7 +42,7 @@ export default defineConfig({
                 { label: 'Действия над ордером', link: '/api/payin/04-actions/' },
                 { label: 'Payment fields и receipts', link: '/api/payin/05-receipts-and-fields/' },
                 { label: 'Dispute', link: '/api/payin/06-disputes/' },
-                { label: 'Вспомогательные endpoint-ы', link: '/api/payin/07-auxiliary/' },
+                { label: 'Trade methods и спец. endpoint-ы', link: '/api/payin/07-auxiliary/' },
               ],
             },
           ],
