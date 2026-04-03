@@ -58,6 +58,7 @@ export default defineConfig({
                 { label: 'Обзор', link: '/api/payout/01-overview/' },
                 { label: 'Создание и список ордеров', link: '/api/payout/02-orders/' },
                 { label: 'Чтение и отмена', link: '/api/payout/03-read-and-cancel/' },
+                { label: 'Trade methods и справочники', link: '/api/payout/04-dictionaries/' },
               ],
             },
           ],
