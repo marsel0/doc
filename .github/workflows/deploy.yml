@@ -4,7 +4,7 @@ on:
   # Вызывать workflow при каждом пуше в ветку `main`
   # Используете другое имя для ветки? Замените `main` на имя своей ветки
   push:
-    branches: [ main ]
+    branches: [ refactor-v2 ]
   # Разрешает запускать этот workflow вручную с вкладки Actions на GitHub.
   workflow_dispatch:
 
