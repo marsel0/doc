@@ -11,7 +11,7 @@ Authorization: Bearer <SHOP_API_KEY>
 
 ## Методы
 
-| Задача | Endpoint | Описание |
+| Задача | Метод API | Описание |
 | --- | --- | --- |
 | Получить методы оплаты | [`GET /shop/trade-methods`](/doc/api/shop/04-dictionaries/#получение-методов) | Допустимые `type`, `bank` и поля |
 | Создать ордер | [`POST /shop/orders`](/doc/api/payin/02-orders/#post-shoporders) | Redirect или H2H по шагам |
@@ -42,12 +42,12 @@ Authorization: Bearer <SHOP_API_KEY>
 | `status` | Текущий статус |
 | `statusDetails` | Причина или уточнение статуса |
 | `statusTimeoutAt` | Время автоматического перехода/отмены |
-| `requisites` | Реквизиты получателя; состав зависит от trade method |
+| `requisites` | Реквизиты получателя; состав зависит от способа оплаты |
 | `payment` | Выбранный метод и данные плательщика |
 | `customer` | Данные клиента, переданные магазином |
 | `integration.externalOrderId` | ID операции в системе магазина |
-| `integration.link` | Ссылка для redirect-сценария |
-| `integration.callbackUrlStatus` | Результат доставки callback |
+| `integration.link` | Ссылка оплаты для Redirect |
+| `integration.callbackUrlStatus` | Результат доставки уведомления о статусе |
 | `shopAmount` | Сумма зачисления магазину в asset-валюте |
 | `shopFee` | Комиссия в asset-валюте |
 | `currencyRate` | Применённый курс |
@@ -59,7 +59,7 @@ Authorization: Bearer <SHOP_API_KEY>
 | `new` | Ордер создан |
 | `requisites` | Идёт поиск реквизитов |
 | `customer_confirm` | Реквизиты выданы, ожидается перевод клиента |
-| `waiting_confirmation` | Ожидается 3DS/OTP в e-commerce flow |
+| `waiting_confirmation` | Ожидается код 3DS/OTP для оплаты картой |
 | `trader_confirm` | Перевод заявлен, ожидается подтверждение |
 | `hold_completed` | Средства удержаны, но платёж ещё не завершён |
 | `completed` | Платёж успешно завершён |
@@ -72,9 +72,9 @@ Authorization: Bearer <SHOP_API_KEY>
 
 ## Получение статуса
 
-Основной канал — подписанный callback. [`GET /shop/orders/{id}`](/doc/api/payin/03-read/#по-внутреннему-id) нужен для сверки и восстановления
-после таймаута. Callback может повторяться, поэтому обработчик должен быть
-идемпотентным. Алгоритм подписи: [Callback и signature](/doc/v2/callback-signature/).
+Основной способ получать статус — подписанное уведомление. [`GET /shop/orders/{id}`](/doc/api/payin/03-read/#по-внутреннему-id) нужен для проверки после
+таймаута. Уведомление может повториться: сохраните статус, но не выполняйте
+действие второй раз. Проверка подписи: [уведомления и signature](/doc/v2/callback-signature/).
 
 ## Частые ошибки
 

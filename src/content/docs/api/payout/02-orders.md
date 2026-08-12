@@ -37,7 +37,7 @@ curl --location "$BASE_URL/shop/payout-orders?from=2026-03-01&to=2026-03-14&stat
 | `customer.requisites` | да | объект<br />обязательные вложенные поля зависят от `payment.type` |
 | `payment` | да | объект |
 | `payment.type` | да | Согласованный `paymentType` или код из [списка PayOut-методов](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout); [назначение кодов](/doc/api/shop/05-payment-types/) |
-| `payment.bank` | нет | Рекомендуется передавать согласованный `bank` или код из [списка PayOut-методов и банков](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout). Без него для карты банк ищется по BIN, затем используется настроенный fallback |
+| `payment.bank` | нет | Рекомендуется передавать согласованный `bank` или код из [списка PayOut-методов и банков](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout). Без него банк определяется по первым 6 цифрам карты или выбирается настроенный вариант |
 
 ### Необязательные поля body
 
@@ -47,7 +47,7 @@ curl --location "$BASE_URL/shop/payout-orders?from=2026-03-01&to=2026-03-14&stat
 | `customer.email` | Валидный email клиента |
 | `customer.telegram` | Telegram клиента |
 | `integration.externalOrderId` | Уникальный ID выплаты в системе магазина; рекомендуется всегда для поиска после таймаута |
-| `integration.callbackUrl` | Абсолютный URL backend-обработчика статусов |
+| `integration.callbackUrl` | Полный URL обработчика статусов на сервере магазина |
 | `integration.callbackMethod` | `post` или `get`; по умолчанию `post` |
 
 ### Какие поля обязательны внутри `customer.requisites`
@@ -58,10 +58,10 @@ curl --location "$BASE_URL/shop/payout-orders?from=2026-03-01&to=2026-03-14&stat
 | --- | --- | --- |
 | `sbp`<br />`sberpay`<br />`tsbp` | `phone` | `phone`:<br />строка длиной от `7` до `16` символов<br />рекомендуется передавать номер в полном формате с кодом страны |
 | `card2card`<br />`tcard2card` | `cardInfo` | `cardInfo`:<br />только цифры<br />ровно `16` символов |
-| `account_number`<br />`account_number_iban`<br />`upi`<br />`erip` | `accountNumber` | `accountNumber`:<br />строка<br />дополнительной валидации public DTO нет |
+| `account_number`<br />`account_number_iban`<br />`upi`<br />`erip` | `accountNumber` | `accountNumber`:<br />строка<br />API не проверяет формат дополнительно |
 | `account_number_sepa` | `accountNumber`<br />`cardholder`<br />`swiftBic` | `accountNumber`:<br />строка<br /><br />`cardholder`:<br />строка до `200` символов<br /><br />`swiftBic`:<br />строка |
 | `phone_number`<br />`sim` | `phone` | `phone`:<br />строка длиной от `7` до `16` символов |
-| `transfer_via_id_card` | `idCard` | `idCard`:<br />строка<br />дополнительной валидации public DTO нет |
+| `transfer_via_id_card` | `idCard` | `idCard`:<br />строка<br />API не проверяет формат дополнительно |
 | `imps` | `accountNumber`<br />`swiftBic`<br />`cardholder` | `accountNumber`:<br />строка<br /><br />`swiftBic`:<br />строка<br /><br />`cardholder`:<br />строка до `200` символов |
 | `phone_pe` | `phone`<br />`accountNumber` | `phone`:<br />строка длиной от `7` до `16` символов<br /><br />`accountNumber`:<br />строка |
 
@@ -113,7 +113,7 @@ curl --location "$BASE_URL/shop/payout-orders" \
 | `payment` | Фактически выбранные `type` и `bank` |
 | `customer` | Данные клиента и реквизиты получателя |
 | `integration.externalOrderId` | ID выплаты магазина |
-| `integration.callbackUrlStatus` | Состояние доставки последнего callback |
+| `integration.callbackUrlStatus` | Состояние доставки последнего уведомления |
 | `assetCurrencyAmount` | Эквивалент выплаты в asset-валюте |
 | `shopAmount` | Сумма списания с магазина в asset-валюте |
 | `shopFee` | Комиссия магазина в asset-валюте |

@@ -1,9 +1,9 @@
 ---
 title: "Поля реквизитов и customerFields"
-description: "Как читать fields, requisites и customerFields без лишнего reference-шума"
+description: "Какие поля показывать и какие данные собирать у клиента"
 ---
 
-Эта страница нужна, чтобы мерчант понимал, какие поля:
+Здесь описано, какие поля:
 
 - показывать клиенту как реквизиты для оплаты;
 - собирать от клиента в `payment` или `customer.requisites`;
@@ -11,7 +11,7 @@ description: "Как читать fields, requisites и customerFields без л
 
 ## Откуда берутся поля
 
-Основной источник:
+Список можно получить через:
 
 - [`GET /shop/trade-methods`](/doc/api/shop/04-dictionaries/#получение-методов)
 - [`GET /shop/trade-methods/payout`](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout)
@@ -72,9 +72,9 @@ description: "Как читать fields, requisites и customerFields без л
 
 Для `PayIn`:
 
-- `fields` помогают отрисовать реквизиты, куда клиент должен перевести деньги;
+- `fields` показывают, какие реквизиты нужно вывести клиенту;
 - `customerFields` помогают собрать дополнительные данные клиента;
-- часть `customerFields` может быть необязательной, но полезной для аналитики и ускорения обработки.
+- необязательные `customerFields` можно не передавать, если они не нужны вашему сценарию.
 
 ## Как использовать в `PayOut`
 
@@ -88,13 +88,13 @@ description: "Как читать fields, requisites и customerFields без л
 
 | Поле | Где используется | Что означает |
 | :---- | :---- | :---- |
-| `fields.name` | `trade methods` | имя поля реквизита |
-| `fields.type` | `trade methods` | тип для UI и форматирования |
-| `fields.required` | `trade methods` | обязательность поля в реквизитах |
-| `fields.unique` | `trade methods` | системное уникальное поле |
-| `customerFields.name` | `trade methods` | имя поля, которое нужно собрать от клиента |
-| `customerFields.type` | `trade methods` | тип клиентского поля |
-| `customerFields.required` | `trade methods` | обязательность ввода |
+| `fields.name` | список методов | имя поля реквизита |
+| `fields.type` | список методов | тип поля |
+| `fields.required` | список методов | обязательность поля |
+| `fields.unique` | список методов | признак уникального реквизита |
+| `customerFields.name` | список методов | имя поля, которое нужно собрать от клиента |
+| `customerFields.type` | список методов | тип поля клиента |
+| `customerFields.required` | список методов | обязательность ввода |
 
 ## Короткая памятка по `requisites`
 
@@ -105,18 +105,18 @@ description: "Как читать fields, requisites и customerFields без л
 | `phone` | номер телефона для перевода |
 | `accountNumber` | номер счёта |
 | `swiftBic` | банковский идентификатор |
-| `paymentLink` | redirect-ссылка |
+| `paymentLink` | ссылка оплаты |
 | `qrImageUrl` | ссылка на QR-код |
 
 ## Что важно
 
 - Не пытайтесь угадывать набор реквизитов по названию банка.
-- Поля нужно читать из `trade methods` и из фактического `order.requisites`.
+- Используйте согласованную таблицу полей или данные из списка методов и `order.requisites`.
 - Для `PayIn` реквизиты показываются клиенту.
 - Для `PayOut` реквизиты клиента обычно собираются у вас на форме и отправляются в `customer.requisites`.
 
 ## Куда идти дальше
 
 - [Выбор банка и типа оплаты](/doc/v2/payment-methods/)
-- [PayIn H2H sync requisites](/doc/v2/h2h-sync/)
+- [PayIn H2H: реквизиты сразу](/doc/v2/h2h-sync/)
 - [Payout H2H](/doc/v2/payout/)

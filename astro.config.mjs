@@ -64,7 +64,7 @@ export default defineConfig({
         {
           label: 'Справочник',
           items: [
-            { label: 'Callback и подпись', link: '/v2/callback-signature/' },
+            { label: 'Уведомления и подпись', link: '/v2/callback-signature/' },
             { label: 'Поля методов оплаты', link: '/v2/field-reference/' },
             { label: 'Ошибки', link: '/docs/02-api_error_guide/' },
             { label: 'Уникализация суммы', link: '/docs/03-randomization/' },

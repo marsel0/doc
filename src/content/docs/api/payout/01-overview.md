@@ -2,8 +2,8 @@
 title: "PayOut API"
 ---
 
-Этот раздел — точный контракт merchant API для выплат: URL, query-параметры, тело
-запроса и допустимые действия. Пошаговое объяснение сценария сначала читайте в
+Здесь описаны запросы PayOut: URL, параметры, тело и разрешённые действия.
+Порядок подключения смотрите в
 [Payout H2H](/doc/v2/payout/).
 
 Минимальный onboarding для payout:
@@ -12,7 +12,7 @@ title: "PayOut API"
 2. при необходимости проверить баланс через [`GET /shop/assets`](/doc/api/shop/02-balances/#get-shopassets);
 3. получить методы выплат через [`GET /shop/trade-methods/payout`](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout);
 4. создать payout;
-5. читать статус через [`GET /shop/payout-orders/{id}`](/doc/api/payout/03-read-and-cancel/#get-shoppayout-ordersid) или принимать callback.
+5. читать статус через [`GET /shop/payout-orders/{id}`](/doc/api/payout/03-read-and-cancel/#get-shoppayout-ordersid) или получать уведомления.
 
 ## Что важно понимать
 
@@ -20,7 +20,7 @@ title: "PayOut API"
 - статус после create обычно не финальный, а промежуточный `requisites`;
 - payout нельзя произвольно перевести в `completed` прямой записью статуса;
 - из action-методов мерчанту доступна только отмена, если статус это допускает.
-- перед созданием используйте согласованный маппинг для
+- перед созданием используйте согласованную таблицу кодов для
   [`payment.type`](/doc/api/shop/05-payment-types/), рекомендуемого `payment.bank`
   и обязательных `customer.requisites` либо
   [получите PayOut-методы и банки через API](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout).
@@ -31,4 +31,4 @@ title: "PayOut API"
 
 - [Создание и список payout-ордеров](/doc/api/payout/02-orders/)
 - [Чтение и отмена payout-ордеров](/doc/api/payout/03-read-and-cancel/)
-- [Trade methods и справочники](/doc/api/payout/04-dictionaries/)
+- [Способы выплаты и поля](/doc/api/payout/04-dictionaries/)

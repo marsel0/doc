@@ -13,7 +13,7 @@ tableOfContents: false
 1. Откройте [интеграцию](/doc/v2/integration/) и выберите сценарий.
 2. Получите домен, `Shop API key` и `Signature key`.
 3. Проверьте магазин через [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo).
-4. Создайте тестовый ордер и получите финальный статус через callback.
+4. Создайте тестовый ордер и получите уведомление о его статусе.
 
 ## Выберите задачу
 
@@ -30,8 +30,8 @@ tableOfContents: false
 - [PayIn API](/doc/api/payin/01-overview/)
 - [PayOut API](/doc/api/payout/01-overview/)
 - [Shop API](/doc/api/shop/01-overview/)
-- [Callback и подпись](/doc/v2/callback-signature/)
+- [Уведомления и подпись](/doc/v2/callback-signature/)
 - [Ошибки](/doc/docs/02-api_error_guide/)
 
-Ключи храните только на backend. Не считайте redirect или HTTP `201` успешной
+Ключи храните только на сервере. Не считайте переход по ссылке или HTTP `201` успешной
 оплатой: результат определяется статусом ордера.

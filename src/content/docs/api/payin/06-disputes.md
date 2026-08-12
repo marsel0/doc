@@ -8,9 +8,9 @@ title: "PayIn API: диспуты"
 
 | Метод | Когда вызывать | Результат |
 | --- | --- | --- |
-| [`POST /shop/orders/{id}/dispute`](#открыть-диспут) | Ордер `cancelled`, но клиент утверждает, что перевёл деньги | `dispute`, `statusDetails: revert_cancelled`, callback |
+| [`POST /shop/orders/{id}/dispute`](#открыть-диспут) | Ордер `cancelled`, но клиент утверждает, что перевёл деньги | `dispute`, `statusDetails: revert_cancelled`, уведомление |
 | [`POST /shop/orders/external/{externalOrderId}/dispute`](#открыть-по-externalorderid) | То же, поиск по ID магазина | Тот же переход |
-| [`POST /shop/orders/{id}/dispute/cancel`](#отменить-диспут) | Только `dispute`, если магазин отзывает претензию | `cancelled`, `statusDetails: shop`, callback |
+| [`POST /shop/orders/{id}/dispute/cancel`](#отменить-диспут) | Только `dispute`, если магазин отзывает претензию | `cancelled`, `statusDetails: shop`, уведомление |
 | [`POST /shop/orders/external/{externalOrderId}/dispute/cancel`](#отменить-по-externalorderid) | То же, поиск по ID магазина | Тот же переход |
 
 Открыть диспут можно только для отменённого ордера, которому ранее были назначены
@@ -33,7 +33,7 @@ curl "$BASE_URL/shop/orders/$ORDER_ID/dispute" \
   --form "file=@/path/to/receipt.jpg"
 ```
 
-Метод переводит ордер `cancelled → dispute`, создаёт callback и передаёт диспут
+Метод переводит ордер `cancelled → dispute`, отправляет уведомление и передаёт диспут
 связанному провайдеру, если он есть. Из-за финансовой обработки переход может
 быть отклонён, если освобождённые при отмене средства уже недоступны.
 
@@ -59,7 +59,7 @@ curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/dispute/cancel" \
 ```
 
 Разрешён только в `dispute`. Результат — `cancelled` с `statusDetails: shop` и
-новый callback. Метод отзывает диспут, но не удаляет прикреплённый чек.
+новое уведомление. Метод отзывает диспут, но не удаляет прикреплённый чек.
 
 ## Отменить по `externalOrderId`
 

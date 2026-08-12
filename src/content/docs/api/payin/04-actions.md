@@ -2,7 +2,7 @@
 title: "PayIn API: действия над ордером"
 ---
 
-Статус нельзя изменить напрямую. Каждый endpoint ниже выполняет допустимый
+Статус нельзя изменить напрямую. Каждый метод ниже выполняет разрешённое
 переход и возвращает обновлённый ордер.
 
 | Метод | Когда вызывать | На что влияет |
@@ -10,7 +10,7 @@ title: "PayIn API: действия над ордером"
 | [`PATCH /shop/orders/{id}`](#patch-shopordersid) | Зависит от изменяемого поля | Сохраняет выбор метода или данные плательщика; статус не меняет |
 | [`POST /shop/orders/{id}/start-payment`](#post-shopordersidstart-payment) | Только `new`, после выбора `payment.type` | Переводит ордер в `requisites` и запускает поиск реквизитов |
 | [`POST /shop/orders/{id}/confirm-payment`](#post-shopordersidconfirm-payment) | Только `customer_confirm`, после фактического перевода | Переводит в `trader_confirm`; исполнитель начинает проверку платежа |
-| [`POST /shop/orders/{id}/cancel`](#post-shopordersidcancel) | `new`, `requisites`, `customer_confirm`, `waiting_confirmation` | Переводит в `cancelled`, отменяет связанный provider-ордер и создаёт callback |
+| [`POST /shop/orders/{id}/cancel`](#post-shopordersidcancel) | `new`, `requisites`, `customer_confirm`, `waiting_confirmation` | Переводит в `cancelled`, отменяет связанную операцию и отправляет уведомление |
 
 ## PATCH `/shop/orders/{id}`
 
@@ -32,7 +32,7 @@ title: "PayIn API: действия над ордером"
 | `payment.customerAccountNumber` | В `customer_confirm`: номер счёта |
 | `customerConfirmStatusDetails` | В `customer_confirm`: `customer_payed` |
 
-Передавайте только поля из `customerFields` выбранного trade method.
+Передавайте только поля из `customerFields` выбранного способа оплаты.
 
 ```bash
 curl --request PATCH "$BASE_URL/shop/orders/$ORDER_ID" \
@@ -46,7 +46,7 @@ curl --request PATCH "$BASE_URL/shop/orders/$ORDER_ID" \
 ## POST `/shop/orders/{id}/start-payment`
 
 Вызывайте только для ордера в `new`, когда [`payment.type`](/doc/api/shop/05-payment-types/)
-уже выбран по согласованному маппингу или
+уже выбран по согласованной таблице кодов или
 [списку методов и банков](/doc/api/shop/04-dictionaries/#получение-методов). Метод
 переводит ордер в `requisites` и запускает поиск реквизитов. Если способ оплаты
 не выбран, API вернёт `O10001`.
@@ -79,7 +79,7 @@ curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/confirm-payment" \
 ```
 
 Обычно новый статус — `trader_confirm`. Это ещё не успешный финал: дождитесь
-`completed` через callback. Вызов сообщает исполнителю, что платёж нужно проверить;
+`completed` в уведомлении о статусе. Вызов сообщает исполнителю, что платёж нужно проверить;
 сам по себе он не подтверждает зачисление.
 
 ## POST `/shop/orders/{id}/cancel`
@@ -92,6 +92,6 @@ curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/cancel" \
 ```
 
 Успешный ответ содержит `status: cancelled` и `statusDetails: shop`. Из другого
-статуса API вернёт `O10000`. Отмена создаёт callback и отправляет отмену связанному
+статуса API вернёт `O10000`. После отмены площадка отправляет уведомление и отменяет связанную
 провайдеру. После `trader_confirm`, `completed`, `cancelled`, `dispute` или `error`
 этот метод недоступен.

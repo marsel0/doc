@@ -31,7 +31,7 @@ curl --location --request POST "$BASE_URL/shop/payout-orders/b4ad11f1-10b3-4684-
 ```
 
 Если статус не допускает отмену, API вернёт `O10000`. Успешная отмена переводит
-ордер в `cancelled`, устанавливает `statusDetails: shop` и создаёт callback.
+ордер в `cancelled`, устанавливает `statusDetails: shop` и отправляет уведомление.
 
 Типичный успешный результат:
 
