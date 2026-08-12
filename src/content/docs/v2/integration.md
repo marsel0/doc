@@ -36,8 +36,8 @@ Authorization: Bearer <token>
 
 Если собственный платёжный UI не нужен, выбирайте Redirect. H2H sync проще
 пошагового H2H, но требует заранее выбрать
-[`payment.type`](/doc/api/shop/05-payment-types/) из
-[доступных сочетаний метода и банка](/doc/api/shop/04-dictionaries/#получение-методов).
+[`payment.type`](/doc/api/shop/05-payment-types/) по согласованному маппингу или
+[списку доступных методов и банков](/doc/api/shop/04-dictionaries/#получение-методов).
 Пошаговый H2H не рекомендуется для новых интеграций. Не используйте
 PayOut для вывода средств магазина: для этого предназначен withdrawal.
 
@@ -63,7 +63,8 @@ PayOut клиенту и withdrawal с баланса магазина — ра�
 
 1. Проверьте [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo).
 2. Настройте callback и проверку подписи.
-3. Получите актуальные trade methods; не храните коды банков в коде.
+3. Настройте согласованные `paymentType + bank`: используйте собственный маппинг
+   или получите доступные сочетания через API.
 4. Создайте тестовый ордер с уникальным `externalOrderId`.
 5. Сохраните `id`, `externalOrderId`, `amount`, `status` и `statusDetails`.
 6. Проверьте успешный, отменённый и повторный callback.

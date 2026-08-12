@@ -20,7 +20,11 @@ curl --location "$BASE_URL/shop/trade-methods/payout" \
 
 ### Типовые payout methods и обязательные поля
 
-Точный список методов зависит от магазина и текущих доступных route. Источник истины — [`GET /shop/trade-methods/payout`](#get-shoptrade-methodspayout). Ниже приведён дефолтный mapping для методов, которые укладываются в текущую схему `customer.requisites` public payout API.
+Точный список методов зависит от настроек магазина. Можно использовать
+согласованный маппинг или получить список через
+[`GET /shop/trade-methods/payout`](#get-shoptrade-methodspayout). Ниже приведён
+типовой маппинг методов, которые укладываются в текущую схему
+`customer.requisites` public payout API.
 
 | `payment.type` | Что обязательно передавать в `customer.requisites` | `payment.bank` | Комментарий |
 | --- | --- | --- | --- |
@@ -41,7 +45,9 @@ curl --location "$BASE_URL/shop/trade-methods/payout" \
 
 ### Практические замечания
 
-- `payment.bank` необязателен по схеме API, но явный `bank` из payout trade methods делает маршрут предсказуемым. Без банка используется определение по BIN карты или fallback.
+- `payment.bank` необязателен по схеме API, но явный согласованный `bank` делает
+  маршрут предсказуемым. При необходимости код можно получить из payout trade
+  methods. Без банка используется определение по BIN карты или fallback.
 - В request используйте `customer.requisites.cardInfo`, а в response это значение возвращается как `customer.requisites.card`.
 - Если метод требует поле вне текущего набора `customer.requisites`, не используйте такой route в [`POST /shop/payout-orders`](/doc/api/payout/02-orders/#post-shoppayout-orders) без отдельной проверки совместимости.
 - Назначение остальных кодов: [справочник `payment.type`](/doc/api/shop/05-payment-types/).

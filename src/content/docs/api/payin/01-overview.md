@@ -82,7 +82,7 @@ Authorization: Bearer <SHOP_API_KEY>
 | --- | --- |
 | `S10002` | Найти ордер по `externalOrderId`, не повторять create вслепую |
 | `O10000` | Прочитать ордер: действие не подходит текущему статусу |
-| `O10001` | Перед `start-payment` выбрать [`payment.type`](/doc/api/shop/05-payment-types/) из [актуального списка методов](/doc/api/shop/04-dictionaries/#получение-методов) |
+| `O10001` | Перед `start-payment` выбрать согласованный [`payment.type`](/doc/api/shop/05-payment-types/); при необходимости [получить методы через API](/doc/api/shop/04-dictionaries/#получение-методов) |
 | `O10005` | Предложить другой метод или банк |
 | `O10006` | Дочитать существующий ордер с тем же `externalOrderId` |
 

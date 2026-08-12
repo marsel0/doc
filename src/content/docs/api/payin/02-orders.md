@@ -21,8 +21,8 @@ H2H-сценария, в котором метод выбирается позж
 | `customer.ip` | нет | IP клиента, не сервера магазина |
 | `customer.fingerprint` | нет | Стабильный fingerprint антифрод-системы |
 | `payment` | нет | Выбранный метод; для Redirect можно не передавать |
-| `payment.type` | если есть `payment` | [`paymentType` из актуального списка методов](/doc/api/shop/04-dictionaries/#получение-методов); [назначение кодов](/doc/api/shop/05-payment-types/) |
-| `payment.bank` | нет | Банк получателя: [`bank` из того же элемента списка](/doc/api/shop/04-dictionaries/#получение-методов), не `bankName`. Если поле не передано, платформа сама выберет доступный банк для `payment.type` |
+| `payment.type` | если есть `payment` | Согласованный `paymentType` или код из [списка методов](/doc/api/shop/04-dictionaries/#получение-методов); [назначение кодов](/doc/api/shop/05-payment-types/) |
+| `payment.bank` | нет | Согласованный банк получателя или `bank` из [списка методов и банков](/doc/api/shop/04-dictionaries/#получение-методов), не `bankName`. Если поле не передано, платформа сама выберет доступный банк для `payment.type` |
 | `payment.customerBank` | нет | Банк отправителя — откуда платит клиент. Код помогает подобрать совместимый маршрут и ссылку оплаты; это не банк получателя |
 | `integration.externalOrderId` | нет по API, рекомендуется всегда | Уникальный ID заказа магазина |
 | `integration.callbackUrl` | нет, рекомендуется | Полный URL backend-обработчика статусов |
@@ -60,9 +60,9 @@ curl "$BASE_URL/shop/orders" \
 Создаёт H2H-ордер и сразу ищет реквизиты. Все поля совпадают с предыдущим
 endpoint, но `payment` и `payment.type` обязательны.
 
-Используйте согласованные `payment.type` и `payment.bank`: [получите актуальные
-сочетания методов и банков](/doc/api/shop/04-dictionaries/#получение-методов), а
-[назначение `payment.type`](/doc/api/shop/05-payment-types/) учитывайте при выборе.
+Используйте согласованные `payment.type` и `payment.bank` из собственного маппинга
+или [получите сочетания методов и банков через API](/doc/api/shop/04-dictionaries/#получение-методов).
+[Назначение `payment.type`](/doc/api/shop/05-payment-types/) учитывайте при выборе.
 `payment.bank` необязателен: без него платформа выбирает доступный банк для
 указанного `payment.type`, поэтому ориентируйтесь на `payment.bank` и `requisites`
 из ответа. `payment.customerBank` передавайте, если известен банк отправителя:

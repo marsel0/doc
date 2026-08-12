@@ -36,8 +36,8 @@ curl --location "$BASE_URL/shop/payout-orders?from=2026-03-01&to=2026-03-14&stat
 | `customer.id` | да | стабильный ID клиента в системе магазина; не ID выплаты |
 | `customer.requisites` | да | объект<br />обязательные вложенные поля зависят от `payment.type` |
 | `payment` | да | объект |
-| `payment.type` | да | [`paymentType` из актуального списка PayOut-методов](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout); [назначение кодов](/doc/api/shop/05-payment-types/) |
-| `payment.bank` | нет | Рекомендуется передавать [`bank` из того же элемента списка](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout). Без него для карты банк ищется по BIN, затем используется настроенный fallback |
+| `payment.type` | да | Согласованный `paymentType` или код из [списка PayOut-методов](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout); [назначение кодов](/doc/api/shop/05-payment-types/) |
+| `payment.bank` | нет | Рекомендуется передавать согласованный `bank` или код из [списка PayOut-методов и банков](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout). Без него для карты банк ищется по BIN, затем используется настроенный fallback |
 
 ### Необязательные поля body
 

@@ -20,8 +20,8 @@ title: "PayIn API: действия над ордером"
 
 | Поле | Когда и что передавать |
 | --- | --- |
-| `payment.type` | В `new`: [`paymentType` из актуального списка методов](/doc/api/shop/04-dictionaries/#получение-методов); [назначение кодов](/doc/api/shop/05-payment-types/) |
-| `payment.bank` | В `new`: [`bank` из того же элемента списка](/doc/api/shop/04-dictionaries/#получение-методов), не `bankName` |
+| `payment.type` | В `new`: согласованный `paymentType` или код из [списка методов](/doc/api/shop/04-dictionaries/#получение-методов); [назначение кодов](/doc/api/shop/05-payment-types/) |
+| `payment.bank` | В `new`: согласованный `bank` или код из [списка методов и банков](/doc/api/shop/04-dictionaries/#получение-методов), не `bankName` |
 | `payment.customerBank` | В `new` или `customer_confirm`: код банка плательщика |
 | `payment.customerCardFirstDigits` | В `customer_confirm`: первые 6 цифр карты |
 | `payment.customerCardLastDigits` | В `customer_confirm`: последние 4 цифры карты |
@@ -46,7 +46,8 @@ curl --request PATCH "$BASE_URL/shop/orders/$ORDER_ID" \
 ## POST `/shop/orders/{id}/start-payment`
 
 Вызывайте только для ордера в `new`, когда [`payment.type`](/doc/api/shop/05-payment-types/)
-уже выбран из [актуального списка методов и банков](/doc/api/shop/04-dictionaries/#получение-методов). Метод
+уже выбран по согласованному маппингу или
+[списку методов и банков](/doc/api/shop/04-dictionaries/#получение-методов). Метод
 переводит ордер в `requisites` и запускает поиск реквизитов. Если способ оплаты
 не выбран, API вернёт `O10001`.
 

@@ -20,9 +20,10 @@ title: "PayOut API"
 - статус после create обычно не финальный, а промежуточный `requisites`;
 - payout нельзя произвольно перевести в `completed` прямой записью статуса;
 - из action-методов мерчанту доступна только отмена, если статус это допускает.
-- перед созданием берите [`payment.type`](/doc/api/shop/05-payment-types/),
-  рекомендуемый `payment.bank` и обязательные поля `customer.requisites` из
-  [актуального списка PayOut-методов и банков](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout).
+- перед созданием используйте согласованный маппинг для
+  [`payment.type`](/doc/api/shop/05-payment-types/), рекомендуемого `payment.bank`
+  и обязательных `customer.requisites` либо
+  [получите PayOut-методы и банки через API](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout).
 - `externalOrderId` должен быть уникальным в вашей системе: он нужен для безопасного
   поиска ордера после сбоя или таймаута.
 
