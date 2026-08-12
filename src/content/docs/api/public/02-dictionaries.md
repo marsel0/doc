@@ -1,5 +1,6 @@
 ---
 title: "Public API: справочники"
+pagefind: false
 ---
 
 ```bash
@@ -55,7 +56,7 @@ curl --location "$PUBLIC_BASE_URL/trade-methods"
 
 ## Что такое `trade method`
 
-В `simple-pay` `trade method` это не отдельный enum, а конкретная связка:
+`Trade method` — это не отдельный enum, а конкретная связка:
 
 - банк
 - фиатная валюта
@@ -75,8 +76,9 @@ curl --location "$PUBLIC_BASE_URL/trade-methods"
 
 ## Где смотреть payin и payout mapping
 
-- Для payin trade methods и mapping по `fields[]` / `customerFields[]` смотрите [PAYIN API: trade methods](/doc/api/payin/07-auxiliary/).
-- Для payout mapping по `customer.requisites` и `payment.bank` смотрите [PAYOUT API: trade methods и справочники](/doc/api/payout/04-dictionaries/).
+- Для PayIn смотрите [доступные способы и состав полей](/doc/api/shop/04-dictionaries/),
+  а также [назначение `payment.type`](/doc/api/shop/05-payment-types/).
+- Для PayOut смотрите [способы и обязательные поля](/doc/api/payout/04-dictionaries/).
 
 ## Примечание по `phone_tm`
 

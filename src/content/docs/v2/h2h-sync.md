@@ -1,72 +1,41 @@
 ---
-title: "PayIn H2H sync requisites"
-description: "Сценарий, где реквизиты нужны сразу в ответе"
+title: "PayIn H2H: реквизиты сразу"
+description: "Метод выбран до создания ордера"
 ---
 
-`PayIn H2H sync requisites` используется, когда клиент остаётся на вашем интерфейсе, метод оплаты известен заранее, а реквизиты нужно получить сразу в ответе на create-запрос.
+Используйте этот сценарий, если клиент остаётся на UI магазина, способ оплаты уже
+выбран, а реквизиты нужны в ответе create-запроса.
 
-Это исходный сценарий из оригинальной документации Марселя: мерчант заранее знает `payment.type` и `payment.bank`, создаёт ордер через `sync-requisites` и сразу получает реквизиты или ошибку, если реквизиты не найдены.
+## Сценарий
 
-## Когда использовать
+1. Используйте согласованные `paymentType + bank`: [получите доступные сочетания
+   методов и банков](/doc/api/shop/04-dictionaries/#получение-методов), а
+   назначение кода проверьте в [справочнике `payment.type`](/doc/api/shop/05-payment-types/).
+2. Создайте [`POST /shop/orders/sync-requisites`](/doc/api/payin/02-orders/#post-shoporderssync-requisites).
+3. Покажите клиенту фактический `amount` и `requisites` из ответа.
+4. После перевода вызовите [`POST /shop/orders/{id}/confirm-payment`](/doc/api/payin/04-actions/#post-shopordersidconfirm-payment).
+5. Дождитесь `completed` через callback.
 
-- клиент остаётся на вашем UI;
-- метод оплаты известен заранее;
-- банк уже выбран;
-- реквизиты нужно получить сразу в ответе.
+[`payment.type`](/doc/api/shop/05-payment-types/) обязателен и должен быть взят из
+[актуального списка методов](/doc/api/shop/04-dictionaries/#получение-методов).
+`payment.bank` — необязательный банк получателя из того же элемента списка. Если
+его не передать, платформа сама выберет доступный банк для указанного типа оплаты;
+используйте банк и реквизиты из ответа.
 
-## Базовый flow
+`payment.customerBank` — необязательный банк, **из которого платит клиент**. Он
+помогает подобрать совместимый маршрут и сформировать подходящую ссылку оплаты.
+Это не банк получателя.
 
-1. Прочитать доступные способы оплаты через `GET /public/api/v1/shop/trade-methods` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoptrade-methods/operation/ShopTradeMethodsController_getTradeMethods" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
-2. Выбрать нужную связку `payment.type` и `payment.bank`.
-3. Создать ордер через `POST /public/api/v1/shop/orders/sync-requisites` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_createSyncRequisiteWithTimeout" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
-4. Получить реквизиты или ошибку, если реквизиты не найдены.
-5. После фактической оплаты вызвать `POST /public/api/v1/shop/orders/{id}/confirm-payment` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_confirmPayment" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
-6. Зафиксировать финальный статус по callback или по `GET /public/api/v1/shop/orders/{id}` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_findOne" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> / `GET /public/api/v1/shop/orders/external/{externalOrderId}` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_findOneByExternalOrderId" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
+## Частые ошибки
 
-## Что делает магазин
+| Ошибка | Что делать |
+| --- | --- |
+| `O10005` | Реквизиты не найдены: предложите другой согласованный метод или банк |
+| `B10000`, `P10000`, `T10000` | Обновите коды по справочнику методов и проверьте согласованные настройки магазина |
+| `O10000` при `confirm-payment` | Прочитайте ордер; подтверждение допустимо только в `customer_confirm` |
+| Таймаут create (`S10002`) | Найдите ордер по `externalOrderId`; не создавайте дубль |
+| Повторный callback | Обработайте идемпотентно и ответьте HTTP `200` |
 
-- читает `GET /public/api/v1/shop/trade-methods` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoptrade-methods/operation/ShopTradeMethodsController_getTradeMethods" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> перед построением UI;
-- создаёт ордер через `POST /public/api/v1/shop/orders/sync-requisites` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_createSyncRequisiteWithTimeout" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> уже с заполненными `payment.type` и `payment.bank`;
-- показывает клиенту фактический `amount` и реквизиты из ответа;
-- подтверждает оплату через `POST /public/api/v1/shop/orders/{id}/confirm-payment` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_confirmPayment" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> только после реального действия клиента;
-- хранит `externalOrderId`, `id`, `status` и статус доставки callback.
-
-## Поля запроса
-
-### Что передаётся в `sync-requisites`
-
-| Поле | Статус | Комментарий |
-| --- | --- | --- |
-| `amount` | обязательное | Сумма ордера в фиатной валюте |
-| `currency` | обязательное | Фиатная валюта |
-| `customer.id` | обязательное | Идентификатор клиента на стороне мерчанта |
-| `customer.ip` | опциональное | Сейчас не обязательно, но лучше передавать |
-| `customer.fingerprint` | опциональное | Сейчас не обязательно, но лучше передавать |
-| `integration.externalOrderId` | опциональное, но рекомендуется | Ваш идентификатор операции |
-| `integration.callbackUrl` | опциональное | URL для callback |
-| `integration.callbackMethod` | опциональное | `get` или `post` |
-| `integration.returnUrl` | опциональное | URL возврата клиента |
-| `payment.type` | обязательное | Выбранный клиентом тип оплаты |
-| `payment.bank` | опциональное | Выбранный банк, если он нужен методу |
-
-Если для конкретного метода банк обязателен, ориентируйтесь на `trade methods`, а не на общую таблицу.
-
-## Что важно
-
-- `POST /public/api/v1/shop/orders/sync-requisites` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_createSyncRequisiteWithTimeout" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> нужен именно для сценария “реквизиты сразу”.
-- Если реквизиты не найдены, типичная ошибка: `404` и `O10005`.
-- Клиенту нужно показывать фактический `amount`, а не только `initialAmount`.
-- После таймаута create-запроса нельзя сразу создавать новый ордер: сначала ищите его через `GET /public/api/v1/shop/orders/external/{externalOrderId}` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_findOneByExternalOrderId" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
-- Callback-обработчик должен быть идемпотентным.
-
-## Куда идти дальше
-
-- [Примеры API](/doc/v2/examples/#payin-h2h-sync-requisites)
-- [PayIn: статусы и переходы](/doc/v2/payin-statuses/)
-- [PayIn: диспуты](/doc/v2/payin-disputes/)
-- [PayIn: чеки](/doc/v2/payin-receipts/)
-- [Выбор банка и типа оплаты](/doc/v2/payment-methods/)
-- [Поля реквизитов и customerFields](/doc/v2/field-reference/)
-- <a href="/doc/api/payin/02-orders/" target="_blank" rel="noopener noreferrer">PAYIN API: создание и список ордеров</a>
-- <a href="/doc/api/payin/04-actions/" target="_blank" rel="noopener noreferrer">PAYIN API: действия над ордером</a>
-
+- [Методы и поля](/doc/api/shop/04-dictionaries/)
+- [Создание с реквизитами: поля и curl](/doc/api/payin/02-orders/#post-shoporderssync-requisites)
+- [Подтверждение оплаты](/doc/api/payin/04-actions/#post-shopordersidconfirm-payment)

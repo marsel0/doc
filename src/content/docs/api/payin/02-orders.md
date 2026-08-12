@@ -1,216 +1,81 @@
 ---
-title: "PAYIN API: создание и список ордеров"
+title: "PayIn API: создание ордеров"
 ---
 
-Все успешные create endpoint-ы возвращают `GetShopOrderDto`. Полный состав полей описан в [PAYIN API: обзор](/doc/api/payin/01-overview/).
+## POST `/shop/orders`
 
-## 1. GET `/shop/orders`
+Создаёт ордер без синхронного поиска реквизитов. Используйте для Redirect или
+H2H-сценария, в котором метод выбирается позже.
 
-Возвращает список payin-ордеров магазина в формате `PaginatedData<GetShopOrderDto>`.
+### Поля запроса
 
-### Query-параметры
-
-| Параметр | Обязателен | Что означает |
+| Поле | Обязательно | Значение и источник |
 | --- | --- | --- |
-| `from` | да | начало диапазона дат |
-| `to` | да | конец диапазона дат |
-| `status` | нет | фильтр по статусу |
-| `take` | нет | размер страницы, по умолчанию `100` |
-| `page` | нет | номер страницы, по умолчанию `1` |
-
-### `curl`
-
-```bash
-curl --location "$BASE_URL/shop/orders?from=2026-03-01&to=2026-03-14&status=completed&take=50&page=1" \
-  --header "Authorization: Bearer $SHOP_TOKEN"
-```
-
-### Ожидаемый ответ
-
-```json
-{
-  "items": [
-    {
-      "id": "0b98eb1a-9e3a-4536-bed6-d10e5a7e097a",
-      "initialAmount": 1500,
-      "amount": 1500,
-      "currency": "RUB",
-      "status": "completed",
-      "statusDetails": null,
-      "statusTimeoutAt": null,
-      "payment": {
-        "type": "sbp",
-        "bank": "sberbank",
-        "customerCardFirstDigits": null,
-        "customerCardLastDigits": "1234",
-        "customerBank": "tbank",
-        "customerName": "IVAN IVANOV",
-        "customerPhoneLastDigits": "1122",
-        "customerUtr": null,
-        "customerIBAN": null,
-        "customerAccountNumber": null
-      },
-      "customer": {
-        "id": "order-20002",
-        "name": null,
-        "email": "buyer@example.com",
-        "phone": "+79990001122",
-        "ip": null,
-        "fingerprint": null
-      },
-      "integration": {
-        "externalOrderId": "merchant-20002",
-        "callbackUrlStatus": "success"
-      },
-      "shopAmount": 14.7,
-      "shopFee": 0.3
-    }
-  ],
-  "page": 1,
-  "pages": 1,
-  "count": 1
-}
-```
-
-## 2. POST `/shop/orders`
-
-Создаёт payin-ордер в статусе `new`.
-
-### Когда использовать
-
-- для redirect-интеграции;
-- для H2H-сценария, если `payment.type` будет выбран позже.
-
-Endpoint помечен в коде как deprecated, но остаётся рабочим именно для этих двух merchant-сценариев.
-
-### Тело запроса
-
-| Поле | Обязателен | Что означает |
-| --- | --- | --- |
-| `amount` | да | сумма ордера |
-| `currency` | да | fiat-валюта |
-| `customer.id` | да | идентификатор клиента в системе магазина |
-| `customer.phone` | нет | телефон клиента |
-| `customer.name` | нет | имя клиента |
-| `customer.email` | нет | email клиента |
-| `customer.ip` | нет | IP клиента |
-| `customer.fingerprint` | нет | fingerprint клиента |
-| `integration.externalOrderId` | нет, но рекомендуется | идентификатор ордера в системе магазина |
-| `integration.callbackUrl` | нет | URL callback |
-| `integration.callbackMethod` | нет | `get` или `post`, по умолчанию `post` |
+| `amount` | да | Положительное число — сумма заказа магазина |
+| `currency` | да | Fiat-код из [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo), например `RUB` |
+| `customer` | да | Объект клиента |
+| `customer.id` | да | Непустой стабильный ID клиента в системе магазина; не подменяйте его ID ордера |
+| `customer.phone` | нет | Телефон клиента |
+| `customer.name` | нет | Имя клиента |
+| `customer.email` | нет | Валидный email |
+| `customer.ip` | нет | IP клиента, не сервера магазина |
+| `customer.fingerprint` | нет | Стабильный fingerprint антифрод-системы |
+| `payment` | нет | Выбранный метод; для Redirect можно не передавать |
+| `payment.type` | если есть `payment` | [`paymentType` из актуального списка методов](/doc/api/shop/04-dictionaries/#получение-методов); [назначение кодов](/doc/api/shop/05-payment-types/) |
+| `payment.bank` | нет | Банк получателя: [`bank` из того же элемента списка](/doc/api/shop/04-dictionaries/#получение-методов), не `bankName`. Если поле не передано, платформа сама выберет доступный банк для `payment.type` |
+| `payment.customerBank` | нет | Банк отправителя — откуда платит клиент. Код помогает подобрать совместимый маршрут и ссылку оплаты; это не банк получателя |
+| `integration.externalOrderId` | нет по API, рекомендуется всегда | Уникальный ID заказа магазина |
+| `integration.callbackUrl` | нет, рекомендуется | Полный URL backend-обработчика статусов |
+| `integration.callbackMethod` | нет | `post` или `get`; по умолчанию `post` |
 | `integration.returnUrl` | нет | URL возврата клиента |
-| `integration.successUrl` | нет | URL возврата при успехе |
-| `integration.failUrl` | нет | URL возврата при неуспехе |
+| `integration.successUrl` | нет | URL возврата UI при успехе |
+| `integration.failUrl` | нет | URL возврата UI при неуспехе |
 
-### `curl`
+Поля `card.*` относятся только к отдельно согласованным PCI DSS e-commerce
+режимам и не нужны обычной P2P-интеграции.
 
 ```bash
-curl --location "$BASE_URL/shop/orders" \
-  --header "Content-Type: application/json" \
+curl "$BASE_URL/shop/orders" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
+  --header "Content-Type: application/json" \
   --data '{
     "amount": 1500,
     "currency": "RUB",
     "customer": {
-      "id": "order-20001",
-      "email": "buyer@example.com",
+      "id": "customer-42",
       "phone": "+79990001122"
     },
     "integration": {
       "externalOrderId": "merchant-20001",
-      "callbackUrl": "[[CALLBACK_URL]]",
-      "callbackMethod": "post",
-      "returnUrl": "[[RETURN_URL]]",
-      "successUrl": "[[SUCCESS_URL]]",
-      "failUrl": "[[FAIL_URL]]"
+      "callbackUrl": "https://merchant.example/payments/callback"
     }
   }'
 ```
 
-### Ожидаемый ответ
+Для Redirect перенаправьте клиента на `integration.link` из ответа. Это не
+подтверждает оплату — дождитесь `completed`.
 
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "new",
-  "statusDetails": null,
-  "statusTimeoutAt": "2026-03-14T12:30:00.000Z",
-  "requisites": null,
-  "shop": {
-    "name": "simple-pay-demo",
-    "customerDataCollectionOrder": "before_payment",
-    "collectCustomerReceipts": true
-  },
-  "payment": {
-    "type": null,
-    "bank": null,
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": null,
-    "customerBank": null,
-    "customerName": null,
-    "customerPhoneLastDigits": null,
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20001",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "assetCurrencyAmount": 15,
-  "shopAmount": 14.7,
-  "shopFee": 0.3,
-  "initialShopCommission": 2,
-  "currencyRate": 100,
-  "integration": {
-    "link": "[[PAY_URL]]/order/94215bfb-1963-4a41-9686-f90412e0a58f/91efd176-...",
-    "token": "91efd176-8511-4793-834d-a1b38effb16d",
-    "callbackUrl": "[[CALLBACK_URL]]",
-    "callbackMethod": "post",
-    "callbackUrlStatus": null,
-    "externalOrderId": "merchant-20001",
-    "returnUrl": "[[RETURN_URL]]",
-    "successUrl": "[[SUCCESS_URL]]",
-    "failUrl": "[[FAIL_URL]]"
-  }
-}
-```
+## POST `/shop/orders/sync-requisites`
 
-## 3. POST `/shop/orders/sync-requisites`
+Создаёт H2H-ордер и сразу ищет реквизиты. Все поля совпадают с предыдущим
+endpoint, но `payment` и `payment.type` обязательны.
 
-Создаёт ордер и сразу пытается подобрать реквизиты. Это основной H2H endpoint.
-
-### Дополнительные поля запроса
-
-| Поле | Обязателен | Что означает |
-| --- | --- | --- |
-| `payment.type` | да | код метода оплаты |
-| `payment.bank` | нет | код банка |
-| `payment.customerBank` | нет | банк, из которого клиент делает перевод |
-
-Остальная часть тела запроса совпадает с `POST /shop/orders`.
-
-### `curl`
+Используйте согласованные `payment.type` и `payment.bank`: [получите актуальные
+сочетания методов и банков](/doc/api/shop/04-dictionaries/#получение-методов), а
+[назначение `payment.type`](/doc/api/shop/05-payment-types/) учитывайте при выборе.
+`payment.bank` необязателен: без него платформа выбирает доступный банк для
+указанного `payment.type`, поэтому ориентируйтесь на `payment.bank` и `requisites`
+из ответа. `payment.customerBank` передавайте, если известен банк отправителя:
+он может учитываться при выборе маршрута и формировании ссылки оплаты.
 
 ```bash
-curl --location "$BASE_URL/shop/orders/sync-requisites" \
-  --header "Content-Type: application/json" \
+curl "$BASE_URL/shop/orders/sync-requisites" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
+  --header "Content-Type: application/json" \
   --data '{
     "amount": 1500,
     "currency": "RUB",
-    "customer": {
-      "id": "order-20002",
-      "phone": "+79990001122",
-      "email": "buyer@example.com"
-    },
+    "customer": { "id": "customer-42" },
     "payment": {
       "type": "sbp",
       "bank": "sberbank",
@@ -218,117 +83,60 @@ curl --location "$BASE_URL/shop/orders/sync-requisites" \
     },
     "integration": {
       "externalOrderId": "merchant-20002",
-      "callbackUrl": "[[CALLBACK_URL]]",
-      "callbackMethod": "post"
+      "callbackUrl": "https://merchant.example/payments/callback"
     }
   }'
 ```
 
-### Ожидаемый успешный ответ
+Успешный ответ обычно содержит `status: customer_confirm` и `requisites`. Если
+реквизиты не найдены, API вернёт `O10005` и отменённый ордер в поле `order`.
+
+## Пример ответа создания
 
 ```json
 {
-  "id": "0b98eb1a-9e3a-4536-bed6-d10e5a7e097a",
+  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
   "initialAmount": 1500,
   "amount": 1500,
   "currency": "RUB",
   "status": "customer_confirm",
   "statusDetails": null,
-  "statusTimeoutAt": "2026-03-14T12:40:00.000Z",
   "requisites": {
     "phone": "+79995554433",
     "bank": "sberbank",
-    "bankName": "Sberbank",
-    "sameBank": false,
     "cardholder": "IVAN IVANOV",
-    "paymentLink": null,
-    "rawQrCodeData": null,
-    "qrImageUrl": null
+    "paymentLink": "https://bank.example/pay/abc123"
   },
-  "shop": {
-    "name": "simple-pay-demo",
-    "customerDataCollectionOrder": "before_payment",
-    "collectCustomerReceipts": true
-  },
-  "payment": {
-    "type": "sbp",
-    "bank": "sberbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": null,
-    "customerBank": "tbank",
-    "customerName": null,
-    "customerPhoneLastDigits": null,
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20002",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "assetCurrencyAmount": 15,
-  "shopAmount": 14.7,
-  "shopFee": 0.3,
-  "initialShopCommission": 2,
-  "currencyRate": 100,
+  "payment": { "type": "sbp", "bank": "sberbank" },
+  "customer": { "id": "customer-42" },
   "integration": {
-    "link": "[[PAY_URL]]/order/0b98eb1a-9e3a-4536-bed6-d10e5a7e097a/4c0d8778-...",
-    "token": "4c0d8778-62e6-4b20-9d6f-6a4bcaf06f43",
-    "callbackUrl": "[[CALLBACK_URL]]",
-    "callbackMethod": "post",
-    "callbackUrlStatus": null,
-    "externalOrderId": "merchant-20002"
+    "externalOrderId": "merchant-20002",
+    "link": "[[DOMAIN_URL]]/order/94215bfb-1963-4a41-9686-f90412e0a58f/token"
   }
 }
 ```
 
-### Ожидаемый ответ, если реквизиты не найдены
+Полный состав полей: [модель ордера](/doc/api/payin/01-overview/#основные-поля-ответа).
+Если включена рандомизация, показывайте клиенту `amount`, а не `initialAmount`.
+`requisites.paymentLink` необязателен. Если он получен, можно перенаправить
+клиента на этот URL; иначе используйте `integration.link` или покажите реквизиты.
 
-```json
-{
-  "statusCode": 404,
-  "errorMessage": "No requisites found for specific payment type and bank at this moment",
-  "errorCode": "O10005",
-  "order": {
-    "id": "1d481bac-61e0-4e9b-8b54-2c48d474d394",
-    "initialAmount": 132,
-    "amount": 132,
-    "currency": "RUB",
-    "status": "cancelled",
-    "statusDetails": "requisites_timeout",
-    "statusTimeoutAt": null,
-    "requisites": null,
-    "payment": {
-      "type": "card2card",
-      "bank": "sberbank",
-      "customerCardFirstDigits": null,
-      "customerCardLastDigits": null,
-      "customerBank": null,
-      "customerName": null,
-      "customerPhoneLastDigits": null,
-      "customerUtr": null,
-      "customerIBAN": null,
-      "customerAccountNumber": null
-    },
-    "customer": {
-      "id": "order-20002",
-      "name": null,
-      "email": null,
-      "phone": null,
-      "ip": null,
-      "fingerprint": null
-    },
-    "integration": {
-      "externalOrderId": "merchant-20002",
-      "callbackUrlStatus": null
-    }
-  },
-  "error": "Not Found"
-}
+## GET `/shop/orders`
+
+Возвращает страницу ордеров.
+
+| Query | Обязательно | Формат |
+| --- | --- | --- |
+| `from` | нет | `YYYY-MM-DD` или ISO 8601 |
+| `to` | нет | `YYYY-MM-DD` или ISO 8601 |
+| `tz` | нет | IANA timezone, например `Europe/Moscow`; по умолчанию UTC |
+| `status` | нет | Статус PayIn-ордера |
+| `take` | нет | Целое `1..1000`; по умолчанию `100` |
+| `page` | нет | Номер страницы; по умолчанию `1` |
+
+```bash
+curl "$BASE_URL/shop/orders?from=2026-03-01&to=2026-03-14&status=completed&page=1" \
+  --header "Authorization: Bearer $SHOP_TOKEN"
 ```
 
-Если на магазине включена randomization, ориентируйтесь на фактическое `amount`, а не только на `initialAmount`.
+Ответ: `{ "items": [...], "page": 1, "pages": 1, "count": 1 }`.

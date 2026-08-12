@@ -1,154 +1,81 @@
 ---
-title: "PAYIN API: payment fields и receipts"
+title: "PayIn API: чеки"
 ---
 
-## 1. GET `/shop/orders/{id}/payment-fields`
+Все методы используют внутренний `id` ордера и `Shop API key`.
 
-Возвращает переопределения payment-полей по настройкам магазина.
+## Загрузить чек
+
+[`POST /shop/orders/{id}/receipts`](#загрузить-чек) принимает `multipart/form-data`.
+
+| Поле | Обязательно | Значение |
+| --- | --- | --- |
+| `file` | да | Один бинарный файл до 3 MB; не JSON и не base64 |
 
 ```bash
-curl --location "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/payment-fields" \
+curl "$BASE_URL/shop/orders/$ORDER_ID/receipts" \
+  --header "Authorization: Bearer $SHOP_TOKEN" \
+  --form "file=@/path/to/receipt.jpg"
+```
+
+Чек разрешён в `customer_confirm`, `trader_confirm`, `completed`, `cancelled`,
+`dispute` и `error`. В `new`, `requisites` и `waiting_confirmation` API вернёт
+`O10000`.
+
+Загрузка удаляет ранее прикреплённые чеки этого ордера: храните `filename` из
+нового списка, а не рассчитывайте на историю файлов.
+
+| Статус до загрузки | Результат |
+| --- | --- |
+| `cancelled` | Ордер автоматически переходит в `dispute` с причиной `revert_cancelled`; статус `cancelled` больше нельзя считать финальным |
+| `dispute` | Статус не меняется; новый чек добавляется в материалы текущего разбирательства |
+| `customer_confirm`, `trader_confirm`, `completed`, `error` | Чек сохраняется, статус не меняется |
+
+После перехода `cancelled → dispute` придёт callback. Повторно прочитайте ордер и
+приостановите окончательное зачисление/возврат до разрешения диспута.
+
+## Получить список
+
+```bash
+curl "$BASE_URL/shop/orders/$ORDER_ID/receipts" \
   --header "Authorization: Bearer $SHOP_TOKEN"
 ```
 
-### Ожидаемый ответ
-
 ```json
-[
-  {
-    "name": "customerCardLastDigits",
-    "hidden": false,
-    "pattern": "^[0-9]{4}$",
-    "patternExample": "1234",
-    "maxLength": 4
-  }
-]
+[{ "filename": "receipt_20260314_120501.jpg" }]
 ```
 
-## 2. GET `/shop/orders/{id}/receipts`
+## Получить временную ссылку
 
-Возвращает список загруженных чеков.
+`filename` берётся из списка чеков.
 
 ```bash
-curl --location "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/receipts" \
-  --header "Authorization: Bearer $SHOP_TOKEN"
-```
-
-### Ожидаемый ответ
-
-```json
-[
-  {
-    "filename": "receipt_20260314_120501.jpg"
-  }
-]
-```
-
-## 3. POST `/shop/orders/{id}/receipts`
-
-Загрузка чека.
-
-### Когда использовать
-
-По коду чек можно загружать, когда ордер в одном из статусов:
-
-- `customer_confirm`
-- `trader_confirm`
-- `completed`
-- `cancelled`
-- `dispute`
-- `error`
-
-Размер файла в проекте ограничен `3 MB`.
-
-```bash
-curl --location "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/receipts" \
+curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/receipts/url" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
-  --form "file=@/tmp/receipt.jpg"
-```
-
-### Ожидаемый ответ
-
-Если ордер не был `cancelled`, API вернёт обновлённый ордер в текущем статусе:
-
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "trader_confirm",
-  "statusDetails": null,
-  "statusTimeoutAt": "2026-03-14T12:55:00.000Z",
-  "payment": {
-    "type": "sbp",
-    "bank": "sberbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": "1234",
-    "customerBank": "tbank",
-    "customerName": "IVAN IVANOV",
-    "customerPhoneLastDigits": "1122",
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20002",
-    "callbackUrlStatus": null
-  }
-}
-```
-
-Если чек загружается в уже отменённый ордер, платформа автоматически переведёт его в `dispute`:
-
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "dispute",
-  "statusDetails": "revert_cancelled",
-  "statusTimeoutAt": null,
-  "integration": {
-    "externalOrderId": "merchant-20002",
-    "callbackUrlStatus": "in_progress"
-  }
-}
-```
-
-## 4. POST `/shop/orders/{id}/remove-receipt`
-
-Удаление чека по имени файла.
-
-```bash
-curl --location --request POST "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/remove-receipt" \
   --header "Content-Type: application/json" \
-  --header "Authorization: Bearer $SHOP_TOKEN" \
-  --data '{
-    "filename": "receipt.jpg"
-  }'
+  --data '{ "filename": "receipt_20260314_120501.jpg" }'
 ```
 
-Успешный ответ: `200 OK`, тело пустое.
+Ответ: `{ "url": "https://..." }`. Ссылка действует 60 секунд. Метод не меняет
+ордер и доступен независимо от его статуса, если файл существует.
 
-## 5. POST `/shop/orders/{id}/receipts/url`
-
-Получить временную ссылку на чек.
+## Удалить чек
 
 ```bash
-curl --location --request POST "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/receipts/url" \
-  --header "Content-Type: application/json" \
+curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/remove-receipt" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
-  --data '{
-    "filename": "receipt.jpg"
-  }'
+  --header "Content-Type: application/json" \
+  --data '{ "filename": "receipt_20260314_120501.jpg" }'
 ```
 
-### Ожидаемый ответ
+Успешный ответ: HTTP `200` с пустым телом.
 
-```json
-{
-  "url": "[[STORAGE_URL]]/receipts/order/94215bfb-1963-4a41-9686-f90412e0a58f/receipt.jpg?X-Amz-Expires=60"
-}
-```
+Удаление файла не отменяет последствия его загрузки: ордер в `dispute` останется
+в `dispute`. Для возврата в `cancelled` используйте
+[`POST /shop/orders/{id}/dispute/cancel`](/doc/api/payin/06-disputes/#отменить-диспут).
+
+## Поля оплаты
+
+[`GET /shop/orders/{id}/payment-fields`](#поля-оплаты) возвращает переопределения полей для
+конкретного ордера. Используйте `hidden`, `pattern`, `patternExample` и `maxLength`
+при построении формы. Общая схема полей: [customerFields](/doc/v2/field-reference/).

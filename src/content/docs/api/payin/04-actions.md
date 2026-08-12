@@ -1,338 +1,96 @@
 ---
-title: "PAYIN API: действия над ордером"
+title: "PayIn API: действия над ордером"
 ---
 
-Ниже описаны merchant action endpoint-ы. Статусы и поля ордера вынесены в [PAYIN API: обзор](/doc/api/payin/01-overview/), чтобы не дублировать их на каждой странице.
+Статус нельзя изменить напрямую. Каждый endpoint ниже выполняет допустимый
+переход и возвращает обновлённый ордер.
 
-## 1. PATCH `/shop/orders/{id}`
+| Метод | Когда вызывать | На что влияет |
+| --- | --- | --- |
+| [`PATCH /shop/orders/{id}`](#patch-shopordersid) | Зависит от изменяемого поля | Сохраняет выбор метода или данные плательщика; статус не меняет |
+| [`POST /shop/orders/{id}/start-payment`](#post-shopordersidstart-payment) | Только `new`, после выбора `payment.type` | Переводит ордер в `requisites` и запускает поиск реквизитов |
+| [`POST /shop/orders/{id}/confirm-payment`](#post-shopordersidconfirm-payment) | Только `customer_confirm`, после фактического перевода | Переводит в `trader_confirm`; исполнитель начинает проверку платежа |
+| [`POST /shop/orders/{id}/cancel`](#post-shopordersidcancel) | `new`, `requisites`, `customer_confirm`, `waiting_confirmation` | Переводит в `cancelled`, отменяет связанный provider-ордер и создаёт callback |
 
-Обновляет ордер и возвращает актуальное состояние ордера.
+## PATCH `/shop/orders/{id}`
 
-### Когда использовать
+В `new` выбирает способ оплаты; в `customer_confirm` сохраняет данные плательщика.
+Запрос не меняет статус. Пустое тело не допускается; при смешивании полей каждое
+поле должно быть разрешено в текущем статусе.
 
-- в статусе `new` для выбора `payment.type` и `payment.bank`;
-- в статусе `customer_confirm` для записи данных о платеже клиента;
-- в статусе `customer_confirm` для установки `customerConfirmStatusDetails`.
-
-### Какие поля можно передавать
-
-| Поле | Когда использовать |
+| Поле | Когда и что передавать |
 | --- | --- |
-| `payment.type` | только когда ордер в `new` |
-| `payment.bank` | только когда ордер в `new` |
-| `payment.customerCardFirstDigits` | только когда ордер в `customer_confirm` |
-| `payment.customerCardLastDigits` | только когда ордер в `customer_confirm` |
-| `payment.customerBank` | только когда ордер в `customer_confirm` |
-| `payment.customerName` | только когда ордер в `customer_confirm` |
-| `payment.customerPhoneLastDigits` | только когда ордер в `customer_confirm` |
-| `payment.customerUtr` | только когда ордер в `customer_confirm` |
-| `payment.customerIBAN` | только когда ордер в `customer_confirm` |
-| `payment.customerAccountNumber` | только когда ордер в `customer_confirm` |
-| `customerConfirmStatusDetails` | только когда ордер в `customer_confirm` |
+| `payment.type` | В `new`: [`paymentType` из актуального списка методов](/doc/api/shop/04-dictionaries/#получение-методов); [назначение кодов](/doc/api/shop/05-payment-types/) |
+| `payment.bank` | В `new`: [`bank` из того же элемента списка](/doc/api/shop/04-dictionaries/#получение-методов), не `bankName` |
+| `payment.customerBank` | В `new` или `customer_confirm`: код банка плательщика |
+| `payment.customerCardFirstDigits` | В `customer_confirm`: первые 6 цифр карты |
+| `payment.customerCardLastDigits` | В `customer_confirm`: последние 4 цифры карты |
+| `payment.customerPhoneLastDigits` | В `customer_confirm`: последние 4 цифры телефона |
+| `payment.customerUtr` | В `customer_confirm`: 12 цифр UTR |
+| `payment.customerName` | В `customer_confirm`: имя плательщика |
+| `payment.customerIBAN` | В `customer_confirm`: IBAN плательщика |
+| `payment.customerAccountNumber` | В `customer_confirm`: номер счёта |
+| `customerConfirmStatusDetails` | В `customer_confirm`: `customer_payed` |
 
-### Пример: выбрать метод оплаты
+Передавайте только поля из `customerFields` выбранного trade method.
 
 ```bash
-curl --location --request PATCH "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f" \
-  --header "Content-Type: application/json" \
+curl --request PATCH "$BASE_URL/shop/orders/$ORDER_ID" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
+  --header "Content-Type: application/json" \
   --data '{
-    "payment": {
-      "type": "card2card",
-      "bank": "tbank"
-    }
+    "payment": { "type": "sbp", "bank": "sberbank" }
   }'
 ```
 
-### Ожидаемый ответ
+## POST `/shop/orders/{id}/start-payment`
 
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "new",
-  "statusDetails": null,
-  "statusTimeoutAt": "2026-03-14T12:30:00.000Z",
-  "requisites": null,
-  "shop": {
-    "name": "simple-pay-demo",
-    "customerDataCollectionOrder": "before_payment",
-    "collectCustomerReceipts": true
-  },
-  "payment": {
-    "type": "card2card",
-    "bank": "tbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": null,
-    "customerBank": null,
-    "customerName": null,
-    "customerPhoneLastDigits": null,
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20001",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": null
-  }
-}
-```
-
-### Пример: записать данные плательщика
+Вызывайте только для ордера в `new`, когда [`payment.type`](/doc/api/shop/05-payment-types/)
+уже выбран из [актуального списка методов и банков](/doc/api/shop/04-dictionaries/#получение-методов). Метод
+переводит ордер в `requisites` и запускает поиск реквизитов. Если способ оплаты
+не выбран, API вернёт `O10001`.
 
 ```bash
-curl --location --request PATCH "$BASE_URL/shop/orders/0b98eb1a-9e3a-4536-bed6-d10e5a7e097a" \
-  --header "Content-Type: application/json" \
-  --header "Authorization: Bearer $SHOP_TOKEN" \
-  --data '{
-    "payment": {
-      "customerCardLastDigits": "1234",
-      "customerPhoneLastDigits": "1122",
-      "customerBank": "tbank",
-      "customerName": "IVAN IVANOV"
-    },
-    "customerConfirmStatusDetails": "customer_payed"
-  }'
-```
-
-### Ожидаемый ответ
-
-```json
-{
-  "id": "0b98eb1a-9e3a-4536-bed6-d10e5a7e097a",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "customer_confirm",
-  "statusDetails": "customer_payed",
-  "statusTimeoutAt": "2026-03-14T12:40:00.000Z",
-  "requisites": {
-    "phone": "+79995554433",
-    "bank": "sberbank",
-    "bankName": "Sberbank",
-    "sameBank": false,
-    "cardholder": "IVAN IVANOV",
-    "paymentLink": null,
-    "rawQrCodeData": null,
-    "qrImageUrl": null
-  },
-  "payment": {
-    "type": "sbp",
-    "bank": "sberbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": "1234",
-    "customerPhoneLastDigits": "1122",
-    "customerBank": "tbank",
-    "customerName": "IVAN IVANOV",
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20002",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20002",
-    "callbackUrlStatus": null
-  }
-}
-```
-
-## 2. POST `/shop/orders/{id}/start-payment`
-
-Запускает поиск реквизитов. Нормальный merchant flow для этого endpoint-а: ордер в `new`, а `payment.type` уже выбран.
-
-Если `payment.type` ещё не выбран, API вернёт `O10001`.
-
-### `curl`
-
-```bash
-curl --location --request POST "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/start-payment" \
+curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/start-payment" \
   --header "Authorization: Bearer $SHOP_TOKEN"
 ```
 
-### Ожидаемый ответ
+Можно передать тело формата `PATCH`, чтобы выбрать метод непосредственно перед
+стартом.
 
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "requisites",
-  "statusDetails": null,
-  "statusTimeoutAt": "2026-03-14T12:26:00.000Z",
-  "requisites": null,
-  "payment": {
-    "type": "card2card",
-    "bank": "tbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": null,
-    "customerBank": null,
-    "customerName": null,
-    "customerPhoneLastDigits": null,
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20001",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": null
-  }
-}
-```
+## POST `/shop/orders/{id}/confirm-payment`
 
-После этого реквизиты будут подобраны асинхронно, а ордер перейдёт в `customer_confirm`.
-
-Тело запроса может содержать `UpdateOrderDto`, если вы хотите обновить ордер непосредственно перед стартом.
-
-## 3. POST `/shop/orders/{id}/confirm-payment`
-
-Подтверждает, что клиент выполнил перевод.
-
-### Когда использовать
-
-По коду endpoint подтверждения работает только в статусе `customer_confirm`. В остальных случаях API вернёт `O10000`.
-
-### `curl`
+Сообщает, что клиент выполнил перевод. Разрешён только в `customer_confirm`.
+Данные плательщика добавляйте, только если их требует `customerFields`.
+Не вызывайте метод при одном лишь открытии страницы или нажатии кнопки без
+фактического перевода.
 
 ```bash
-curl --location --request POST "$BASE_URL/shop/orders/0b98eb1a-9e3a-4536-bed6-d10e5a7e097a/confirm-payment" \
-  --header "Content-Type: application/json" \
+curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/confirm-payment" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
+  --header "Content-Type: application/json" \
   --data '{
     "payment": {
       "customerCardLastDigits": "1234",
-      "customerPhoneLastDigits": "1122",
       "customerBank": "tbank"
     }
   }'
 ```
 
-### Ожидаемый ответ
+Обычно новый статус — `trader_confirm`. Это ещё не успешный финал: дождитесь
+`completed` через callback. Вызов сообщает исполнителю, что платёж нужно проверить;
+сам по себе он не подтверждает зачисление.
 
-```json
-{
-  "id": "0b98eb1a-9e3a-4536-bed6-d10e5a7e097a",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "trader_confirm",
-  "statusDetails": null,
-  "statusTimeoutAt": "2026-03-14T12:55:00.000Z",
-  "requisites": {
-    "phone": "+79995554433",
-    "bank": "sberbank",
-    "bankName": "Sberbank",
-    "sameBank": false,
-    "cardholder": "IVAN IVANOV",
-    "paymentLink": null,
-    "rawQrCodeData": null,
-    "qrImageUrl": null
-  },
-  "payment": {
-    "type": "sbp",
-    "bank": "sberbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": "1234",
-    "customerPhoneLastDigits": "1122",
-    "customerBank": "tbank",
-    "customerName": null,
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20002",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20002",
-    "callbackUrlStatus": null
-  }
-}
-```
+## POST `/shop/orders/{id}/cancel`
 
-## 4. POST `/shop/orders/{id}/cancel`
-
-Отменяет ордер.
+Разрешён в `new`, `requisites`, `customer_confirm` и `waiting_confirmation`.
 
 ```bash
-curl --location --request POST "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/cancel" \
+curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/cancel" \
   --header "Authorization: Bearer $SHOP_TOKEN"
 ```
 
-### Когда использовать
-
-По коду merchant cancel разрешён только для статусов:
-
-- `new`
-- `requisites`
-- `customer_confirm`
-
-В остальных случаях API вернёт `O10000`.
-
-### Ожидаемый ответ
-
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "cancelled",
-  "statusDetails": "shop",
-  "statusTimeoutAt": null,
-  "payment": {
-    "type": "card2card",
-    "bank": "tbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": null,
-    "customerBank": null,
-    "customerName": null,
-    "customerPhoneLastDigits": null,
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "customer": {
-    "id": "order-20001",
-    "name": null,
-    "email": "buyer@example.com",
-    "phone": "+79990001122",
-    "ip": null,
-    "fingerprint": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": "in_progress"
-  }
-}
-```
+Успешный ответ содержит `status: cancelled` и `statusDetails: shop`. Из другого
+статуса API вернёт `O10000`. Отмена создаёт callback и отправляет отмену связанному
+провайдеру. После `trader_confirm`, `completed`, `cancelled`, `dispute` или `error`
+этот метод недоступен.

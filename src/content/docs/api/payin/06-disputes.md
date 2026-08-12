@@ -1,133 +1,72 @@
 ---
-title: "PAYIN API: dispute"
+title: "PayIn API: диспуты"
 ---
 
-В merchant API `dispute` открывается только по уже отменённому ордеру. Если статус не подходит, API вернёт `O10000`.
+Диспут означает, что отменённый платёж снова требует разбирательства. Пока ордер
+находится в `dispute`, не считайте его окончательно отменённым и не выполняйте
+необратимый возврат клиенту.
 
-## 1. POST `/shop/orders/{id}/dispute`
+| Метод | Когда вызывать | Результат |
+| --- | --- | --- |
+| [`POST /shop/orders/{id}/dispute`](#открыть-диспут) | Ордер `cancelled`, но клиент утверждает, что перевёл деньги | `dispute`, `statusDetails: revert_cancelled`, callback |
+| [`POST /shop/orders/external/{externalOrderId}/dispute`](#открыть-по-externalorderid) | То же, поиск по ID магазина | Тот же переход |
+| [`POST /shop/orders/{id}/dispute/cancel`](#отменить-диспут) | Только `dispute`, если магазин отзывает претензию | `cancelled`, `statusDetails: shop`, callback |
+| [`POST /shop/orders/external/{externalOrderId}/dispute/cancel`](#отменить-по-externalorderid) | То же, поиск по ID магазина | Тот же переход |
 
-Открыть dispute по внутреннему `id`.
+Открыть диспут можно только для отменённого ордера, которому ранее были назначены
+реквизиты исполнителя или провайдера. Из другого статуса API вернёт `O10000`; если
+назначения не было, диспут открыть нельзя.
 
-Тело: `multipart/form-data`
+## Открыть диспут
 
-- `amount` , опционально;
-- `file` , опционально.
+Тело — `multipart/form-data`.
+
+| Поле | Обязательно | Значение и влияние |
+| --- | --- | --- |
+| `file` | нет | Чек до 3 MB. Прикрепляется к диспуту; ранее загруженный чек будет заменён |
+| `amount` | нет | Положительная фактически переведённая сумма. Передавайте только при расхождении с `amount` ордера; значение учитывается при разборе суммы диспута |
 
 ```bash
-curl --location "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/dispute" \
+curl "$BASE_URL/shop/orders/$ORDER_ID/dispute" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
   --form "amount=1500" \
-  --form "file=@/tmp/receipt.jpg"
+  --form "file=@/path/to/receipt.jpg"
 ```
 
-### Ожидаемый ответ
+Метод переводит ордер `cancelled → dispute`, создаёт callback и передаёт диспут
+связанному провайдеру, если он есть. Из-за финансовой обработки переход может
+быть отклонён, если освобождённые при отмене средства уже недоступны.
 
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "dispute",
-  "statusDetails": "revert_cancelled",
-  "statusTimeoutAt": null,
-  "payment": {
-    "type": "sbp",
-    "bank": "sberbank",
-    "customerCardFirstDigits": null,
-    "customerCardLastDigits": "1234",
-    "customerBank": "tbank",
-    "customerName": "IVAN IVANOV",
-    "customerPhoneLastDigits": "1122",
-    "customerUtr": null,
-    "customerIBAN": null,
-    "customerAccountNumber": null
-  },
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": "in_progress"
-  }
-}
-```
+Тот же переход автоматически выполняет
+[`POST /shop/orders/{id}/receipts`](/doc/api/payin/05-receipts-and-fields/#загрузить-чек),
+если загрузить чек в ордере `cancelled`.
 
-## 2. POST `/shop/orders/external/{id}/dispute`
-
-Открыть dispute по `externalOrderId`.
+## Открыть по `externalOrderId`
 
 ```bash
-curl --location "$BASE_URL/shop/orders/external/merchant-20001/dispute" \
+curl "$BASE_URL/shop/orders/external/$EXTERNAL_ORDER_ID/dispute" \
   --header "Authorization: Bearer $SHOP_TOKEN" \
-  --form "amount=1500"
+  --form "file=@/path/to/receipt.jpg"
 ```
 
-### Ожидаемый ответ
+Ограничения и результат совпадают с методом по внутреннему `id`.
 
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "dispute",
-  "statusDetails": "revert_cancelled",
-  "statusTimeoutAt": null,
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": "in_progress"
-  }
-}
-```
-
-## 3. POST `/shop/orders/{id}/dispute/cancel`
-
-Закрыть dispute по внутреннему ID.
+## Отменить диспут
 
 ```bash
-curl --location --request POST "$BASE_URL/shop/orders/94215bfb-1963-4a41-9686-f90412e0a58f/dispute/cancel" \
+curl --request POST "$BASE_URL/shop/orders/$ORDER_ID/dispute/cancel" \
   --header "Authorization: Bearer $SHOP_TOKEN"
 ```
 
-### Ожидаемый ответ
+Разрешён только в `dispute`. Результат — `cancelled` с `statusDetails: shop` и
+новый callback. Метод отзывает диспут, но не удаляет прикреплённый чек.
 
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "cancelled",
-  "statusDetails": "shop",
-  "statusTimeoutAt": null,
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": "in_progress"
-  }
-}
-```
-
-## 4. POST `/shop/orders/external/{id}/dispute/cancel`
-
-Закрыть dispute по `externalOrderId`.
+## Отменить по `externalOrderId`
 
 ```bash
-curl --location --request POST "$BASE_URL/shop/orders/external/merchant-20001/dispute/cancel" \
+curl --request POST \
+  "$BASE_URL/shop/orders/external/$EXTERNAL_ORDER_ID/dispute/cancel" \
   --header "Authorization: Bearer $SHOP_TOKEN"
 ```
 
-### Ожидаемый ответ
-
-```json
-{
-  "id": "94215bfb-1963-4a41-9686-f90412e0a58f",
-  "initialAmount": 1500,
-  "amount": 1500,
-  "currency": "RUB",
-  "status": "cancelled",
-  "statusDetails": "shop",
-  "statusTimeoutAt": null,
-  "integration": {
-    "externalOrderId": "merchant-20001",
-    "callbackUrlStatus": "in_progress"
-  }
-}
-```
+Ограничения и результат совпадают с методом по внутреннему `id`.

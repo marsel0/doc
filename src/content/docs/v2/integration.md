@@ -1,200 +1,82 @@
 ---
 title: "Интеграция"
-description: "Общая схема merchant-интеграции и выбор сценария"
+description: "Короткий маршрут подключения merchant API"
 ---
 
-Эта страница нужна как точка входа в merchant-интеграцию. Здесь остаётся только общая схема подключения: что нужно получить на старте, как устроена модель работы, какой сценарий выбрать и какие базовые требования нужны до production.
+## Доступ
 
-Детальные API-методы вынесены в отдельные разделы. Примеры запросов и ответов тоже вынесены отдельно, чтобы не смешивать процесс интеграции и reference.
+Получите у платформы:
 
-## Что нужно на старте
-
-Минимальный набор:
-
-- домен инстанса `simple-pay`;
-- `Shop API key`;
-- `Balance API key`;
-- `Signature key` для callback.
-
-В рамках этой документации считается, что ключи уже получены, а callback является обязательной частью нормальной интеграции. `GET`-чтение статуса остаётся резервным каналом контроля, но не должно быть основным способом синхронизации.
-
-## Базовые переменные
-
-Если ваш инстанс доступен по домену `[[DOMAIN_URL]]`, merchant API используется через `BASE_URL`.
+- `Shop API key` для ордеров, методов и чтения баланса;
+- `Signature key` для проверки callback;
+- `Balance API key`, только если нужен вывод средств магазина.
 
 ```bash
-export DOMAIN="[[DOMAIN_URL]]"
 export BASE_URL="[[BASE_URL]]"
 export SHOP_TOKEN="<SHOP_API_KEY>"
 export BALANCE_TOKEN="<BALANCE_API_KEY>"
-export SIGNATURE_KEY="<SIGNATURE_KEY>"
 ```
 
-Все страницы и примеры в этой документации используют именно этот `BASE_URL`.
+Ключ передаётся только с backend магазина:
 
-## Какие ключи для чего нужны
+```http
+Authorization: Bearer <token>
+```
 
-### `Shop API key`
+Проверьте доступ запросом [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo).
 
-Используется для:
+## Выбор сценария
 
-- `payin`-ордеров;
-- `payout`-ордеров;
-- чтения ордеров;
-- trade methods;
-- данных магазина и курсов.
+| Сценарий | Когда использовать | Что реализует магазин | Инструкция |
+| --- | --- | --- | --- |
+| PayIn Redirect | Нужен самый короткий запуск; клиента можно перевести на внешнюю платёжную страницу | Создание ордера, redirect, callback и проверку статуса. Выбор метода и показ реквизитов выполняет платёжная страница | [Redirect](/doc/v2/red/) |
+| PayIn H2H sync | Метод известен до создания; реквизиты или прямая ссылка нужны в том же ответе; клиент остаётся в UI магазина | Выбор метода, показ реквизитов/redirect по `paymentLink`, подтверждение перевода и callback | [H2H: реквизиты сразу](/doc/v2/h2h-sync/) |
+| PayIn H2H по шагам — **сложный, не рекомендуется** | Только если ордер обязательно создать до выбора способа оплаты и магазин готов управлять каждым переходом статуса | Загрузку методов, выбор через `PATCH`, запуск поиска, показ реквизитов, подтверждение и callback | [H2H: по шагам](/doc/v2/h2h-step/) |
+| PayOut H2H | Магазин отправляет выплату клиенту по его реквизитам | Сбор реквизитов по выбранному методу, проверку баланса, создание выплаты и callback | [PayOut](/doc/v2/payout/) |
 
-### `Balance API key`
+Если собственный платёжный UI не нужен, выбирайте Redirect. H2H sync проще
+пошагового H2H, но требует заранее выбрать
+[`payment.type`](/doc/api/shop/05-payment-types/) из
+[доступных сочетаний метода и банка](/doc/api/shop/04-dictionaries/#получение-методов).
+Пошаговый H2H не рекомендуется для новых интеграций. Не используйте
+PayOut для вывода средств магазина: для этого предназначен withdrawal.
 
-Используется для:
+PayOut клиенту и withdrawal с баланса магазина — разные операции.
 
-- чтения баланса магазина;
-- создания заявок на вывод средств магазина;
-- чтения статуса заявок на вывод.
+## Что реализовать
 
-### `Signature key`
+| Задача | API | Подробности |
+| --- | --- | --- |
+| Получить способы оплаты | [`GET /shop/trade-methods`](/doc/api/shop/04-dictionaries/#получение-методов) | [Методы и поля](/doc/api/shop/04-dictionaries/), [`payment.type`](/doc/api/shop/05-payment-types/) |
+| Создать PayIn | [`POST /shop/orders`](/doc/api/payin/02-orders/#post-shoporders) или [`POST /shop/orders/sync-requisites`](/doc/api/payin/02-orders/#post-shoporderssync-requisites) | [Создание ордера](/doc/api/payin/02-orders/) |
+| Получить статус | Callback; резервно [`GET /shop/orders/{id}`](/doc/api/payin/03-read/#по-внутреннему-id) | [Чтение ордера](/doc/api/payin/03-read/), [callback](/doc/v2/callback-signature/) |
+| Продвинуть или отменить ордер | [`PATCH`, `start-payment`, `confirm-payment`, `cancel`](/doc/api/payin/04-actions/) | [Условия и последствия действий](/doc/api/payin/04-actions/) |
+| Прикрепить чек | [`POST /shop/orders/{id}/receipts`](/doc/api/payin/05-receipts-and-fields/#загрузить-чек); в `cancelled` откроет диспут | [Чеки](/doc/api/payin/05-receipts-and-fields/) |
+| Открыть диспут | [`POST /shop/orders/{id}/dispute`](/doc/api/payin/06-disputes/#открыть-диспут); только из `cancelled` | [Диспуты](/doc/api/payin/06-disputes/) |
+| Прочитать баланс | [`GET /shop/assets`](/doc/api/shop/02-balances/#get-shopassets) | [Баланс](/doc/api/shop/02-balances/) |
+| Вывести средства магазина | [`POST /shop/assets/withdrawals`](/doc/api/shop/02-balances/#post-shopassetswithdrawals) | [Withdrawal](/doc/api/shop/02-balances/#post-shopassetswithdrawals) |
 
-Используется для проверки подлинности callback, которые платформа отправляет на ваш `callbackUrl`.
+Статус нельзя присвоить напрямую полем `status`. Мерчант выполняет действие, а
+платформа проверяет допустимость перехода и возвращает новый статус.
 
-## Как устроена модель интеграции
+## Порядок подключения
 
-В `simple-pay` мерчант не выставляет `status` напрямую. Вместо этого мерчант вызывает бизнес-действия, а платформа сама переводит ордер в следующий допустимый статус.
+1. Проверьте [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo).
+2. Настройте callback и проверку подписи.
+3. Получите актуальные trade methods; не храните коды банков в коде.
+4. Создайте тестовый ордер с уникальным `externalOrderId`.
+5. Сохраните `id`, `externalOrderId`, `amount`, `status` и `statusDetails`.
+6. Проверьте успешный, отменённый и повторный callback.
 
-Это означает:
+## Получение результата
 
-- нельзя произвольно записать ордер в `completed` или `cancelled`;
-- для каждого сценария есть допустимые действия;
-- итоговый статус нужно принимать из callback или дочитывать через `GET`.
+Callback — основной канал. Обработчик должен проверить `signature`, быть
+идемпотентным и вернуть HTTP `200` после сохранения события.
 
-Практически это важнее всего в `H2H`-сценариях, где мерчант управляет шагами оплаты на своей стороне.
+Для сверки и восстановления используйте [`GET /shop/orders/{id}`](/doc/api/payin/03-read/#по-внутреннему-id)
+или [`GET /shop/payout-orders/{id}`](/doc/api/payout/03-read-and-cancel/#get-shoppayout-ordersid).
+Если create-запрос завершился
+таймаутом, сначала найдите ордер по `externalOrderId`; не создавайте новый вслепую.
 
-## Как читать новую структуру
-
-В новой структуре документация разделена на два верхних направления:
-
-- `PayIn` — приём платежей от клиента;
-- `PayOut` — выплаты клиенту.
-
-Внутри `PayIn` сценарии разбиты по типам интеграции.
-
-## Какие сценарии интеграции есть
-
-| Сценарий | Когда использовать | Основные методы |
-| :---- | :---- | :---- |
-| `PayIn Redirect` | клиента можно перевести на платёжную страницу `simple-pay` | `POST /public/api/v1/shop/orders` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_create" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> |
-| `PayIn H2H sync requisites` | клиент остаётся на вашем UI, а реквизиты нужны сразу | `GET /public/api/v1/shop/trade-methods` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoptrade-methods/operation/ShopTradeMethodsController_getTradeMethods" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a><br>`POST /public/api/v1/shop/orders/sync-requisites` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_createSyncRequisiteWithTimeout" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> |
-| `PayIn H2H step-by-step` | способ оплаты выбирается уже после создания ордера | `POST /public/api/v1/shop/orders` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_create" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a><br>`PATCH /public/api/v1/shop/orders/{id}` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_update" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a><br>`POST /public/api/v1/shop/orders/{id}/start-payment` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_startPayment" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a><br>`POST /public/api/v1/shop/orders/{id}/confirm-payment` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_confirmPayment" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> |
-| `Payout H2H` | вы создаёте выплаты и отслеживаете их статус | `GET /public/api/v1/shop/trade-methods/payout` <a href="[[DOMAIN_URL]]/public/api/payout#tag/v1shoptrade-methodspayout/operation/ShopTradeMethodsController_getPayoutTradeMethods" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a><br>`POST /public/api/v1/shop/payout-orders` <a href="[[DOMAIN_URL]]/public/api/payout#tag/v1shoppayout-orders/operation/ShopPayoutOrdersControllerV1_createWithTimeout" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a> |
-
-## Какой сценарий выбрать для PayIn
-
-### `PayIn Redirect`
-
-Используйте, если:
-
-- клиента можно перевести на платёжную страницу платформы;
-- нужен самый короткий и быстрый запуск;
-- вам не нужно показывать реквизиты на своей стороне.
-
-Это сценарий, где мерчант создаёт ордер и перенаправляет клиента по `integration.link`.
-
-Перейти: [PayIn Redirect](/doc/v2/red/)
-
-### `PayIn H2H sync requisites`
-
-Используйте, если:
-
-- клиент остаётся на вашем UI;
-- метод оплаты известен заранее;
-- реквизиты нужны сразу в ответе.
-
-Перейти: [PayIn H2H sync requisites](/doc/v2/h2h-sync/)
-
-### `PayIn H2H step-by-step`
-
-Используйте, если:
-
-- способ оплаты выбирается уже после создания ордера;
-- вы хотите управлять шагами UI отдельно;
-- вам нужно сначала создать ордер, а потом дать пользователю выбрать метод.
-
-Перейти: [PayIn H2H step-by-step](/doc/v2/h2h-step/)
-
-## Когда идти в PayOut
-
-`PayOut` нужен, если вы не принимаете платёж от клиента, а создаёте заявку на выплату средств клиенту.
-
-Это отдельный сценарий со своей логикой:
-
-- нужно читать доступные payout methods;
-- нужно собирать `customer.requisites`;
-- нужно создавать payout-ордер и ждать финальный статус;
-- `201 Created` после создания выплаты не означает финальный успех.
-
-Перейти: [Payout H2H](/doc/v2/payout/)
-
-## Какой путь подключения считать базовым
-
-Для нового мерчанта рекомендуемый порядок такой:
-
-1. Собрать `BASE_URL`.
-2. Проверить доступ к магазину и окружению.
-3. Настроить callback-обработчик.
-4. Реализовать проверку `signature`.
-5. Выбрать направление интеграции: `PayIn` или `PayOut`.
-6. Для `PayIn` выбрать сценарий: `Redirect`, `H2H sync requisites` или `H2H step-by-step`.
-7. Передавать уникальный `externalOrderId`.
-8. Использовать callback как основной канал статусов, а `GET` как резервный.
-
-Если интеграция идёт в production, полезно сразу предусмотреть логирование всех ключевых идентификаторов и статусов.
-
-## Callback и получение статусов
-
-Есть два рабочих способа получать статусы:
-
-- через callback;
-- через `GET`-чтение ордера.
-
-Основной сценарий:
-
-- у ордера указывается `callbackUrl`;
-- платформа отправляет callback при смене статуса;
-- мерчант проверяет `signature`;
-- мерчант обновляет свою внутреннюю бизнес-операцию.
-
-Что важно:
-
-- callback может прийти повторно;
-- обработчик должен быть идемпотентным;
-- даже при `post` статусные параметры могут приходить в query string;
-- polling нужен как резерв, а не как замена callback.
-
-## Что хранить у себя
-
-Минимально у себя стоит сохранять:
-
-- ваш внутренний бизнес-ID;
-- `externalOrderId`;
-- внутренний `id` ордера в `simple-pay`;
-- `amount` и `initialAmount`, если сценарий связан с payin;
-- `status`;
-- `statusDetails`;
-- статус доставки callback.
-
-Если create-запрос завершился таймаутом, именно эти данные позволяют безопасно дочитать ордер и не создать дубль.
-
-## Что важно до production
-
-- `externalOrderId` лучше считать обязательным.
-- После таймаута create-запроса нельзя сразу создавать новый ордер вслепую.
-- Клиенту в payin-сценариях нужно показывать фактический `amount`, а не только `initialAmount`.
-- Callback-обработчик должен быть идемпотентным.
-- Логи по ордерам и callback должны содержать идентификаторы, статусы и результат доставки.
-
-## Как читать эту справку дальше
-
-- Если нужен выбор и описание процесса, начните с `PayIn Redirect`, `PayIn H2H sync requisites`, `PayIn H2H step-by-step` или с отдельной страницы `Payout H2H`.
-- Если нужны готовые payload-ы, ответы и сниппеты, переходите в [Примеры](/doc/v2/examples/).
-- Если нужно понять, как выбрать `bank` / `payment.type` и как читать `fields/customerFields`, начните с [Выбора банка и типа оплаты](/doc/v2/payment-methods/) и [Поля реквизитов и customerFields](/doc/v2/field-reference/).
-- Если нужен точный reference по endpoint-ам и полям, переходите в существующие разделы `/doc/api/...`.
-
+Для PayIn успешным финалом является только `completed`. Redirect клиента и ответ
+`201 Created` не подтверждают оплату. В `dispute` требуется ручной разбор.

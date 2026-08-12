@@ -1,5 +1,6 @@
 ---
 title: "Public API: платёжные helper endpoint-ы"
+pagefind: false
 ---
 
 ## GET `/order-requisites/{id}/qr-code`

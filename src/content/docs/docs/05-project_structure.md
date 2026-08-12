@@ -1,9 +1,10 @@
 ---
-title: "Обзор проекта simple-pay"
-description: "Краткая карта сервисов и локальной инфраструктуры simple-pay"
+title: "Обзор проекта"
+description: "Краткая карта сервисов и локальной инфраструктуры"
+pagefind: false
 ---
 
-Эта страница описывает, из каких приложений состоит репозиторий `simple-pay` и как соотнести их с разделами документации в `doc`.
+Эта страница описывает приложения проекта и их связь с разделами документации.
 
 ## Основные приложения
 
@@ -42,12 +43,12 @@ description: "Краткая карта сервисов и локальной �
 - `PostgreSQL` используется как основная база данных и по умолчанию работает на `5432`.
 - `Redis` используется для кэша и вспомогательных сценариев и по умолчанию работает на `6379`.
 - `nginx` маршрутизирует запросы между frontend и backend сервисами.
-- Для production-развёртывания в репозитории есть Helm chart в папке `simple-pay/Chart`.
+- Для production-развёртывания используется Helm chart проекта.
 
 ## Как это связано с документацией
 
-- Разделы [PAYIN](/doc/payin/01-redirect_integration/) и [PAYOUT](/doc/payout/01-integration/) описывают merchant-сценарии поверх `public-backend`.
-- Разделы [PAYIN API](/doc/api/payin/01-overview/), [PAYOUT API](/doc/api/payout/01-overview/) и [Shop API](/doc/api/shop/01-overview/) документируют merchant endpoint-ы.
+- Разделы [PayIn](/doc/payin/01-redirect_integration/) и [PayOut](/doc/payout/01-integration/) описывают merchant-сценарии поверх `public-backend`.
+- Разделы [PayIn API](/doc/api/payin/01-overview/), [PayOut API](/doc/api/payout/01-overview/) и [API магазина](/doc/api/shop/01-overview/) документируют merchant endpoint-ы.
 - Раздел [System API](/doc/api/system/01-overview/) относится к внутренним и сервисным endpoint-ам платформы.
 
 ## Когда какой сервис нужен

@@ -1,44 +1,6 @@
 ---
-title: "Merchant Docs V2"
-description: "Минимальный контур для запуска мерчанта и отдельный расширенный слой"
+title: "Merchant API"
+pagefind: false
 ---
 
-Это рабочий контур новой структуры справки. Он разделён на 2 слоя:
-
-- минимальный маршрут для запуска мерчанта;
-- дополнительные материалы для сложных кейсов и спорных ситуаций.
-
-## Минимальный маршрут
-
-- [Интеграция](/doc/v2/integration/)
-- [Примеры API: все сценарии](/doc/v2/examples/)
-- [PayIn Redirect](/doc/v2/red/)
-- [PayIn H2H sync requisites](/doc/v2/h2h-sync/)
-- [PayIn H2H step-by-step](/doc/v2/h2h-step/)
-- [Payout H2H](/doc/v2/payout/)
-
-## Дополнительные материалы
-
-- [Системная информация](/doc/v2/system-info/)
-- [Shop API](/doc/v2/shop-api/)
-- [Public API](/doc/v2/public-api/)
-- [Выбор банка и типа оплаты](/doc/v2/payment-methods/)
-- [Поля реквизитов и customerFields](/doc/v2/field-reference/)
-- [PayIn: статусы и переходы](/doc/v2/payin-statuses/)
-- [PayIn: диспуты](/doc/v2/payin-disputes/)
-- [PayIn: чеки](/doc/v2/payin-receipts/)
-- [Payout: статусы и переходы](/doc/v2/payout-statuses/)
-- [Callback и подпись](/doc/v2/callback-signature/)
-- [Типовые ошибки](/doc/v2/errors/)
-
-## Принцип структуры
-
-- В минимальном маршруте держим только то, что нужно мерчанту для запуска.
-- В сценарных страницах держим только процесс и шаги интеграции.
-- Подробные API-методы и payload reference остаются в `/doc/api/...`.
-- `PayIn` разбит по исходным сценариям из оригинальной документации.
-- `PayOut` вынесен как отдельный сценарий `Payout H2H`.
-- Дополнительные материалы вынесены отдельно, чтобы не перегружать основной маршрут.
-- Flow и примеры разделены: сценарии объясняют процесс, а примеры собраны в одной API-странице.
-- Все плейсхолдеры `[[BASE_URL]]`, `[[CALLBACK_URL]]`, `[[DOMAIN_URL]]` продолжают поддерживать `?domain=...`.
-
+Начните со страницы [Интеграция](/doc/v2/integration/).

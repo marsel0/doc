@@ -1,9 +1,9 @@
 ---
-title: "Payout: статусы и переходы"
+title: "PayOut: статусы и переходы"
 description: "Основные статусы payout-ордера, детали отмены и спорные состояния"
 ---
 
-`Payout` живёт по своей статусной модели. Для выплат особенно опасно считать успехом сам факт создания ордера: после `POST` работа только начинается.
+`Payout` живёт по своей статусной модели. Ответ на [`POST /shop/payout-orders`](/doc/api/payout/02-orders/#post-shoppayout-orders) означает только создание ордера, а не успешную выплату.
 
 ## Основные статусы
 
@@ -11,20 +11,27 @@ description: "Основные статусы payout-ордера, детали 
 | --- | --- |
 | `new` | Ордер создан |
 | `requisites` | Идёт поиск подходящих реквизитов трейдера |
-| `trader_accept` | Трейдер найден, ожидается принятие ордера |
+| `trader_accept` | Устаревший промежуточный статус ожидания принятия; может встречаться в старых ордерах |
 | `trader_payment` | Трейдер принял ордер и выполняет перевод |
-| `rejected` | Текущая попытка выплаты отклонена |
+| `rejected` | Текущая попытка отклонена; это не финал, система может искать другого исполнителя |
 | `dispute` | Ордер переведён в диспут |
 | `completed` | Выплата выполнена |
 | `cancelled` | Выплата отменена |
+| `error` | Техническая ошибка; требуется сверка и при необходимости поддержка |
 
 ## Финальные статусы
 
-Для мерчанта финальными считаются:
+Автоматически завершать бизнес-операцию можно только по:
 
 - `completed`
 - `cancelled`
-- `dispute`
+
+`dispute` приостанавливает операцию для ручного разбора и позже может перейти в
+`completed`, `cancelled` или обратно в поиск исполнителя.
+
+Сохраняйте и применяйте более новые callback даже после `cancelled`: администратор
+может вернуть отменённую выплату в `dispute`. Необратимые действия магазина лучше
+выполнять с учётом этого операционного правила.
 
 ## `statusDetails`
 
@@ -37,6 +44,7 @@ description: "Основные статусы payout-ордера, детали 
 | `requisites_blocked` | Реквизиты трейдера заблокированы |
 | `payment_impossible` | Перевод невозможен |
 | `revert_dispute` | Администратор вернул ордер из диспута в поиск нового трейдера |
+| `automation_reject` | Попытку отклонила автоматическая обработка |
 
 ### Для `dispute`
 
@@ -46,7 +54,14 @@ description: "Основные статусы payout-ордера, детали 
 | `invalid_requisites` | Трейдер пожаловался на неверные реквизиты |
 | `payment_failed` | Перевод не удалось выполнить |
 | `revert_cancelled` | Отменённый ордер возвращён в диспут |
+| `admin_created` | Диспут создал администратор |
+| `different_amount` | Сумма перевода отличается от суммы ордера |
 | `dispute_verify` | Нужна дополнительная проверка администратором |
+| `dispute_automation_failed` | Автоматическая обработка диспута завершилась ошибкой |
+| `dispute_unexpected` | Получено непредусмотренное состояние |
+| `cascade_assignee_timeout` | Истёк срок поиска отдельного исполнителя |
+| `cascade_total_timeout` | Истёк общий срок поиска исполнителей |
+| `unresolved_response` | Ответ внешнего обработчика не позволил определить результат |
 
 ### Для `cancelled`
 
@@ -57,21 +72,28 @@ description: "Основные статусы payout-ордера, детали 
 | `shop` | Выплату отменил магазин |
 | `requisites_timeout` | Реквизиты не найдены вовремя |
 | `max_rejects_exceeded` | Ордер слишком много раз был отклонён |
+| `cascade_exhausted` | Все доступные исполнители исчерпаны |
+
+### Для `completed`
+
+`statusDetails: hold` означает, что выплата завершена после предварительного
+удержания средств.
 
 ## Чтение статуса
 
 Используйте:
 
-- `GET /public/api/v1/shop/payout-orders/{id}` <a href="[[DOMAIN_URL]]/public/api/payout#tag/v1shoppayout-orders/operation/ShopPayoutOrdersControllerV1_findOne" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>
-- `GET /public/api/v1/shop/payout-orders/external/{externalOrderId}` <a href="[[DOMAIN_URL]]/public/api/payout#tag/v1shoppayout-orders/operation/ShopPayoutOrdersControllerV1_findOneByExternalOrderId" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>
+- [`GET /shop/payout-orders/{id}`](/doc/api/payout/03-read-and-cancel/#get-shoppayout-ordersid)
+- [`GET /shop/payout-orders/external/{externalOrderId}`](/doc/api/payout/03-read-and-cancel/#get-shoppayout-ordersexternalid)
 
 ## Отмена выплаты
 
 Используйте:
 
-- `POST /public/api/v1/shop/payout-orders/{id}/cancel` <a href="[[DOMAIN_URL]]/public/api/payout#tag/v1shoppayout-orders/operation/ShopPayoutOrdersControllerV1_cancel" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>
+- [`POST /shop/payout-orders/{id}/cancel`](/doc/api/payout/03-read-and-cancel/#post-shoppayout-ordersidcancel)
 
-Практическое правило из старой доки: выплата нормально отменяется только в статусах `new`, `requisites`, `trader_accept`, то есть пока конечные исполнители ещё не взяли её в работу.
+Магазин может отменить выплату только в `requisites` или `trader_accept`. После
+перехода в `trader_payment` отмена через merchant API уже недоступна.
 
 ## Практические правила
 

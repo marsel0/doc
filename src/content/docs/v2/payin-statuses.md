@@ -12,22 +12,35 @@ description: "Основные статусы payin-ордера, финальн
 | `new` | Ордер создан |
 | `requisites` | Система ищет подходящие реквизиты |
 | `customer_confirm` | Реквизиты найдены, ожидается оплата клиента |
+| `waiting_confirmation` | В e-commerce flow ожидается подтверждение 3DS/OTP |
 | `trader_confirm` | Клиент подтвердил оплату, ожидается подтверждение трейдером |
+| `hold_completed` | Платёж подтверждён, но завершение отложено внутренней проверкой; ещё не считайте успехом |
 | `dispute` | Ордер переведён в диспут |
 | `completed` | Перевод подтверждён, платёж завершён |
 | `cancelled` | Ордер закрыт без успешной оплаты |
+| `error` | Возникла техническая ошибка; требуется сверка статуса и при необходимости поддержка |
 
-## Финальные статусы
+## Как трактовать результат
 
-Для мерчанта финальными считаются:
+Успешным финалом является только `completed`. `cancelled` означает закрытие без
+успеха, но поздняя загрузка чека может перевести такой ордер в `dispute`.
+`dispute` требует ручного разбора и не должен автоматически завершать заказ как
+успешный или неуспешный.
 
-- `completed`
-- `cancelled`
-- `dispute`
-
-Пока ордер находится в `new`, `requisites`, `customer_confirm` или `trader_confirm`, внутреннюю бизнес-операцию завершать нельзя.
+Пока ордер находится в `new`, `requisites`, `customer_confirm`,
+`waiting_confirmation`, `trader_confirm` или `hold_completed`, внутреннюю
+бизнес-операцию завершать нельзя.
 
 ## `statusDetails`
+
+### Для `new` и `customer_confirm`
+
+| `statusDetails` | Что означает |
+| --- | --- |
+| `amount_selected` | Клиент или система выбрали сумму |
+| `trade_method_reset` | Выбор способа оплаты сброшен |
+| `start_payment_sync_attempt` | Выполняется очередная попытка синхронного поиска реквизитов |
+| `customer_payed` | Клиент сообщил, что выполнил перевод; это ещё не `completed` |
 
 ### Для `dispute`
 
@@ -50,20 +63,27 @@ description: "Основные статусы payin-ордера, финальн
 | `trader` | Ордер отменил трейдер |
 | `new_timeout` | Истекло время выбора метода оплаты |
 | `requisites_timeout` | Истекло время поиска реквизитов |
+| `sync_requisites_attempts` | Исчерпаны попытки синхронного поиска реквизитов |
+| `customer_alternatives_exhausted` | Исчерпаны предложенные клиенту альтернативы |
 | `customer_confirm_timeout` | Истекло время оплаты клиентом, чека нет |
+| `waiting_confirmation_timeout` | Истекло ожидание 3DS/OTP в e-commerce flow |
 | `trader_confirm_timeout` | Истекло время подтверждения трейдером, чека нет |
+| `requisites_verification_order` | Завершён служебный ордер проверки реквизитов |
+
+`trader_confirm_timeout_cancel` — устаревшее значение причины, которое может
+встречаться в исторических данных. Обрабатывайте его как таймаут подтверждения.
 
 ## Как читать статусы правильно
 
 - Основной канал статусов: callback.
-- Резервный канал: `GET /public/api/v1/shop/orders/{id}` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_findOne" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
-- Для поиска по вашему идентификатору: `GET /public/api/v1/shop/orders/external/{externalOrderId}` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_findOneByExternalOrderId" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>.
+- Резервный канал: [`GET /shop/orders/{id}`](/doc/api/payin/03-read/#по-внутреннему-id).
+- Для поиска по вашему идентификатору: [`GET /shop/orders/external/{externalOrderId}`](/doc/api/payin/03-read/#по-externalorderid).
 
 ## Как отменять ордер
 
 Для merchant-отмены используется:
 
-- `POST /public/api/v1/shop/orders/{id}/cancel` <a href="[[DOMAIN_URL]]/public/api/payin#tag/v1shoporders/operation/ShopOrdersControllerV1_cancel" target="_blank" rel="noopener noreferrer">(ссылка на документацию)</a>
+- [`POST /shop/orders/{id}/cancel`](/doc/api/payin/04-actions/#post-shopordersidcancel)
 
 После отмены обязательно смотрите не только `status=cancelled`, но и `statusDetails`.
 

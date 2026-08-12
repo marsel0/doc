@@ -3,138 +3,35 @@ title: Главная
 tableOfContents: false
 ---
 
-# Документация simple-pay
+# Документация для магазина
 
-`simple-pay` предоставляет merchant API для `payin` и `payout`, callback-уведомления, работу с балансами магазина и набор служебных endpoint-ов для интеграции.
+Документация для магазина: приём платежей, выплаты клиентам, статусы, чеки и
+баланс.
 
-Эта документация написана так, чтобы интегратор мог стартовать, имея только:
+## Начало работы
 
-- домен инстанса `simple-pay`;
-- `Shop API key`;
-- `Balance API key`;
-- `Signature key` для callback.
+1. Откройте [интеграцию](/doc/v2/integration/) и выберите сценарий.
+2. Получите домен, `Shop API key` и `Signature key`.
+3. Проверьте магазин через [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo).
+4. Создайте тестовый ордер и получите финальный статус через callback.
 
-## С чего начать, если у вас только домен и ключи
+## Выберите задачу
 
-### 1. Соберите `BASE_URL`
+| Задача | Раздел |
+| --- | --- |
+| Принять платёж с переходом на платёжную страницу | [PayIn Redirect](/doc/v2/red/) |
+| Принять платёж на своём UI и сразу получить реквизиты | [PayIn H2H sync](/doc/v2/h2h-sync/) |
+| Создать PayIn и выбрать метод позже | [PayIn H2H по шагам — сложный, не рекомендуется](/doc/v2/h2h-step/) |
+| Выплатить деньги клиенту | [PayOut H2H](/doc/v2/payout/) |
+| Прочитать баланс или вывести средства магазина | [Баланс магазина](/doc/api/shop/02-balances/) |
 
-Если у вас есть домен инстанса, merchant API обычно вызывается по префиксу:
+## API
 
-```bash
-export DOMAIN="[[DOMAIN_URL]]"
-export BASE_URL="$DOMAIN/public/api/v1"
-```
-
-Дальше все merchant-запросы из документации используют именно `BASE_URL`.
-
-### 2. Проверьте, что `Shop API key` работает
-
-```bash
-export SHOP_TOKEN="<SHOP_API_KEY>"
-
-curl --location "$BASE_URL/shop/info" \
-  --header "Authorization: Bearer $SHOP_TOKEN"
-```
-
-Если ключ корректный, вы получите базовую информацию о магазине.
-
-### 3. Проверьте доступные методы
-
-Для `payin`:
-
-```bash
-curl --location "$BASE_URL/shop/trade-methods" \
-  --header "Authorization: Bearer $SHOP_TOKEN"
-```
-
-Для `payout`:
-
-```bash
-curl --location "$BASE_URL/shop/trade-methods/payout" \
-  --header "Authorization: Bearer $SHOP_TOKEN"
-```
-
-### 4. Создайте первый тестовый ордер
-
-- для приёма платежей начните со страницы [PAYIN: способы и API-примеры](/doc/payin/02-integration/)
-- для выплат начните со страницы [PAYOUT: способы и API-примеры](/doc/payout/02-integration/)
-
-### 5. Настройте получение статусов
-
-Рекомендуемая схема:
-
-- `callbackUrl` , основной канал статусов;
-- `GET`-чтение ордера по `id` или `externalOrderId` , резервный механизм контроля и восстановления состояния.
-
-С учётом того, что у интегратора есть `Signature key`, callback стоит реализовывать сразу как обязательную часть интеграции.
-
-## Что вы можете делать через API
-
-### PayIn
-
-- создавать ордера;
-- читать ордера по `id` и `externalOrderId`;
-- обновлять payment-данные;
-- запускать поиск реквизитов;
-- подтверждать оплату;
-- отменять ордер;
-- открывать и закрывать dispute;
-- загружать и читать чеки.
-
-### PayOut
-
-- получать доступные payout methods;
-- создавать payout-ордера;
-- читать payout по `id` и `externalOrderId`;
-- отменять payout-ордеры в допустимых статусах;
-- получать статусы через callback или `GET`.
-
-### Shop / Service
-
-- проверять магазин и курсы;
-- читать баланс;
-- создавать заявки на вывод средств магазина;
-- читать справочники.
-
-## Что важно понимать про “изменение статусов”
-
-Merchant не записывает статус ордера произвольным полем вроде `status=completed`.
-
-Статусы меняются через action-методы:
-
-- `POST /shop/orders/{id}/start-payment`
-- `POST /shop/orders/{id}/confirm-payment`
-- `POST /shop/orders/{id}/cancel`
-- `POST /shop/orders/{id}/dispute`
-- `POST /shop/orders/{id}/dispute/cancel`
-- `POST /shop/payout-orders/{id}/cancel`
-
-То есть мерчант управляет не самим значением `status`, а бизнес-действиями, которые переводят ордер в следующий допустимый статус.
-
-## Быстрый маршрут по документации
-
-1. Прочитайте [Схему интеграции](/doc/docs/01-integration_guide/).
-2. Проверьте [Работа с магазином](/doc/docs/06-shop_management/), чтобы настроить базовые переменные и первый тестовый запрос.
-3. Выберите [PAYIN](/doc/payin/01-redirect_integration/) или [PAYOUT](/doc/payout/01-integration/).
-4. Используйте страницы с готовыми `curl`-примерами.
-5. Отдельно проверьте [ошибки](/doc/docs/02-api_error_guide/), [рандомизацию](/doc/docs/03-randomization/) и [антифрод](/doc/docs/04-antifrod/).
-
-## Основные страницы
-
-- [Схема интеграции](/doc/docs/01-integration_guide/)
-- [Работа с магазином](/doc/docs/06-shop_management/)
-- [Интеграции PAYIN](/doc/payin/01-redirect_integration/)
-- [PAYIN: способы и API-примеры](/doc/payin/02-integration/)
-- [Интеграции PAYOUT](/doc/payout/01-integration/)
-- [PAYOUT: способы и API-примеры](/doc/payout/02-integration/)
-- [Ошибки и коды ответов](/doc/docs/02-api_error_guide/)
-- [PAYIN API](/doc/api/payin/01-overview/)
-- [PAYOUT API](/doc/api/payout/01-overview/)
+- [PayIn API](/doc/api/payin/01-overview/)
+- [PayOut API](/doc/api/payout/01-overview/)
 - [Shop API](/doc/api/shop/01-overview/)
+- [Callback и подпись](/doc/v2/callback-signature/)
+- [Ошибки](/doc/docs/02-api_error_guide/)
 
-## Как читать документацию
-
-- Разделы `Интеграции` объясняют сценарий по шагам.
-- Разделы `способы и API-примеры` нужны, чтобы быстро запустить рабочие запросы.
-- Раздел `API` даёт reference по endpoint-ам.
-- Страница ошибок нужна отдельно: она описывает, когда можно ретраить запрос, а когда нельзя.
+Ключи храните только на backend. Не считайте redirect или HTTP `201` успешной
+оплатой: результат определяется статусом ордера.

@@ -11,7 +11,10 @@ export default defineConfig({
   site: 'https://marsel0.github.io/doc/', // URL сайта на GitHub Pages
   integrations: [
     starlight({
-      title: '[[PROJECT_NAME]] Docs',
+      title: 'Документация для магазина',
+      locales: {
+        root: { label: 'Русский', lang: 'ru' },
+      },
       customCss: ['./src/styles/global.css'],
       tableOfContents: {
         minHeadingLevel: 2,
@@ -19,117 +22,53 @@ export default defineConfig({
       },
       sidebar: [
         {
-          label: 'V2: запуск мерчанта',
+          label: 'Начало работы',
           items: [
-            { label: 'Интеграция: старт и выбор сценария', link: '/v2/integration/' },
-            {
-              label: 'PayIn: приём платежей',
-              items: [
-                {
-                  label: 'Redirect: переход на платёжную страницу',
-                  link: '/v2/red/',
-                },
-                {
-                  label: 'H2H sync requisites: реквизиты сразу',
-                  link: '/v2/h2h-sync/',
-                },
-                {
-                  label: 'H2H step-by-step: выбор после создания ордера',
-                  link: '/v2/h2h-step/',
-                },
-              ],
-            },
-            {
-              label: 'PayOut: выплаты клиенту',
-              items: [
-                { label: 'Payout H2H', link: '/v2/payout/' },
-              ],
-            },
-            { label: 'Примеры API: все сценарии', link: '/v2/examples/' },
+            { label: 'Интеграция', link: '/v2/integration/' },
+            { label: 'PayIn Redirect', link: '/v2/red/' },
+            { label: 'PayIn H2H: реквизиты сразу', link: '/v2/h2h-sync/' },
+            { label: 'PayIn H2H: по шагам (не рекомендуется)', link: '/v2/h2h-step/' },
+            { label: 'PayOut H2H', link: '/v2/payout/' },
           ],
         },
         {
-          label: 'V2: дополнительные материалы',
+          label: 'PayIn API',
           items: [
-            { label: 'Системная информация: test, prod, demo', link: '/v2/system-info/' },
-            { label: 'Shop API: магазин, баланс, методы', link: '/v2/shop-api/' },
-            { label: 'Public API: справочники и helper endpoint-ы', link: '/v2/public-api/' },
-            { label: 'Выбор банка и типа оплаты', link: '/v2/payment-methods/' },
-            { label: 'Поля реквизитов и customerFields', link: '/v2/field-reference/' },
-            { label: 'PayIn: статусы и переходы', link: '/v2/payin-statuses/' },
-            { label: 'PayIn: диспуты', link: '/v2/payin-disputes/' },
-            { label: 'PayIn: чеки', link: '/v2/payin-receipts/' },
-            { label: 'Payout: статусы и переходы', link: '/v2/payout-statuses/' },
+            { label: 'Обзор и статусы', link: '/api/payin/01-overview/' },
+            { label: 'Создание ордеров', link: '/api/payin/02-orders/' },
+            { label: 'Получение статуса', link: '/api/payin/03-read/' },
+            { label: 'Действия над ордером', link: '/api/payin/04-actions/' },
+            { label: 'Чеки', link: '/api/payin/05-receipts-and-fields/' },
+            { label: 'Диспуты', link: '/api/payin/06-disputes/' },
+          ],
+        },
+        {
+          label: 'PayOut API',
+          items: [
+            { label: 'Обзор и статусы', link: '/api/payout/01-overview/' },
+            { label: 'Создание ордеров', link: '/api/payout/02-orders/' },
+            { label: 'Чтение и отмена', link: '/api/payout/03-read-and-cancel/' },
+            { label: 'Способы и поля', link: '/api/payout/04-dictionaries/' },
+          ],
+        },
+        {
+          label: 'Магазин',
+          items: [
+            { label: 'Доступ и ключи', link: '/api/shop/01-overview/' },
+            { label: 'Баланс и вывод средств', link: '/api/shop/02-balances/' },
+            { label: 'Информация и курсы', link: '/api/shop/03-info/' },
+            { label: 'Способы оплаты и поля', link: '/api/shop/04-dictionaries/' },
+            { label: 'Типы оплаты', link: '/api/shop/05-payment-types/' },
+          ],
+        },
+        {
+          label: 'Справочник',
+          items: [
             { label: 'Callback и подпись', link: '/v2/callback-signature/' },
-            { label: 'Типовые ошибки', link: '/v2/errors/' },
-          ],
-        },
-        {
-          label: 'Общее',
-          items: [
-            { label: 'Схема интеграции', link: '/docs/01-integration_guide/' },
-            { label: 'Рандомизация', link: '/docs/03-randomization/' },
+            { label: 'Поля методов оплаты', link: '/v2/field-reference/' },
+            { label: 'Ошибки', link: '/docs/02-api_error_guide/' },
+            { label: 'Уникализация суммы', link: '/docs/03-randomization/' },
             { label: 'Антифрод', link: '/docs/04-antifrod/' },
-            { label: 'Работа с магазином', link: '/docs/06-shop_management/' },
-            { label: 'Ошибки и коды ответов', link: '/docs/02-api_error_guide/' },
-          ],
-        },
-        {
-          label: 'Payin',
-          items: [
-            { label: 'PAYIN: обзор и логика', link: '/payin/01-redirect_integration/' },
-            { label: 'PAYIN: сценарии и curl-примеры', link: '/payin/02-integration/' },
-            {
-              label: 'PAYIN API',
-              items: [
-                { label: 'Обзор', link: '/api/payin/01-overview/' },
-                { label: 'Создание и список ордеров', link: '/api/payin/02-orders/' },
-                { label: 'Чтение ордеров', link: '/api/payin/03-read/' },
-                { label: 'Действия над ордером', link: '/api/payin/04-actions/' },
-                { label: 'Payment fields и receipts', link: '/api/payin/05-receipts-and-fields/' },
-                { label: 'Dispute', link: '/api/payin/06-disputes/' },
-                { label: 'Trade methods и спец. endpoint-ы', link: '/api/payin/07-auxiliary/' },
-              ],
-            },
-          ],
-        },
-        {
-          label: 'Payout',
-          items: [
-            { label: 'Интеграции PAYOUT', link: '/payout/01-integration/' },
-            { label: 'PAYOUT: способы и API-примеры', link: '/payout/02-integration/' },
-            {
-              label: 'PAYOUT API',
-              items: [
-                { label: 'Обзор', link: '/api/payout/01-overview/' },
-                { label: 'Создание и список ордеров', link: '/api/payout/02-orders/' },
-                { label: 'Чтение и отмена', link: '/api/payout/03-read-and-cancel/' },
-                { label: 'Trade methods и справочники', link: '/api/payout/04-dictionaries/' },
-              ],
-            },
-          ],
-        },
-        {
-          label: 'Дополнительно',
-          items: [
-            {
-              label: 'Shop API',
-              items: [
-                { label: 'Обзор', link: '/api/shop/01-overview/' },
-                { label: 'Баланс и выводы', link: '/api/shop/02-balances/' },
-                { label: 'Информация и курсы', link: '/api/shop/03-info/' },
-                { label: 'Trade methods и справочники', link: '/api/shop/04-dictionaries/' },
-              ],
-            },
-            {
-              label: 'Public API',
-              items: [
-                { label: 'Обзор', link: '/api/public/01-overview/' },
-                { label: 'Справочники', link: '/api/public/02-dictionaries/' },
-                { label: 'Платёжные helper endpoint-ы', link: '/api/public/03-payment-helpers/' },
-              ],
-            },
-            { label: 'System API', link: '/api/system/01-overview/' },
           ],
         },
       ],
