@@ -1,13 +1,50 @@
-:root {
+:root:not([data-theme='light']) {
+  /* Dark theme: the accent-high token is used for links by Starlight. */
+  --sl-color-accent-low: #123d2b;
+  --sl-color-accent: #39c987;
+  --sl-color-accent-high: #8aefba;
+  --sl-color-gray-1: #f0f5f2;
+  --sl-color-gray-2: #d5ded9;
+  --sl-color-gray-3: #a8b6ae;
+  --sl-color-text: #d5ded9;
+  --sl-color-text-accent: var(--sl-color-accent-high);
+  --sl-color-bg: #101713;
+  --sl-color-bg-nav: #17211b;
+  --sl-color-bg-sidebar: #17211b;
+  --sl-color-bg-inline-code: #26342d;
+  --sl-color-hairline-light: #394940;
+  --sl-color-hairline: #202b25;
+  --sl-color-hairline-shade: #0b100d;
+}
+
+:root[data-theme='light'] {
   --sl-color-accent-low: #e6f4ea;
   --sl-color-accent: #1f8f5f;
   --sl-color-accent-high: #0f5132;
+  --sl-color-text: var(--sl-color-gray-2);
+  --sl-color-text-accent: #176f49;
 }
 
 [data-has-hero] .main-pane {
   background:
+    radial-gradient(circle at top left, rgba(57, 201, 135, 0.12), transparent 28rem),
+    linear-gradient(180deg, rgba(16, 23, 19, 0.96), var(--sl-color-bg) 14rem);
+}
+
+:root[data-theme='light'] [data-has-hero] .main-pane {
+  background:
     radial-gradient(circle at top left, rgba(31, 143, 95, 0.12), transparent 28rem),
     linear-gradient(180deg, rgba(248, 250, 252, 0.96), #ffffff 14rem);
+}
+
+/* Underlining keeps links distinguishable from surrounding text in both themes. */
+.sl-markdown-content a:not(:where(.not-content *)) {
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+:root:not([data-theme='light']) .sl-markdown-content a:hover:not(:where(.not-content *)) {
+  color: #c4f8dc;
 }
 
 /* Таблица сохраняет читаемую ширину колонок и прокручивается внутри контента. */
