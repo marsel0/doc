@@ -1,10 +1,10 @@
 ---
-title: "PayOut API: создание и список ордеров"
+title: "PayOut API: создание и список PayOut-ордеров"
 ---
 
 ## GET `/shop/payout-orders`
 
-Возвращает список payout-ордеров в формате `PaginatedData<GetShopPayoutOrderDto>`.
+Возвращает список PayOut-ордеров в формате `PaginatedData<GetShopPayoutOrderDto>`.
 
 ### Query
 
@@ -24,15 +24,15 @@ curl --location "$BASE_URL/shop/payout-orders?from=2026-03-01&to=2026-03-14&stat
 
 ## POST `/shop/payout-orders`
 
-Создаёт payout-ордер.
+Создаёт PayOut-ордер.
 
 :::caution[Не повторяйте создание после неопределённого результата]
-Если запрос на создание PayOut не завершился стандартным ответом API с явным
+Если запрос на создание PayOut-ордера не завершился стандартным ответом API с явным
 отказом — например, ответ не пришёл, произошёл сетевой сбой или API вернул ошибку
-`5xx`, — ордер следует считать созданным. Проверьте его статус перед повторной
-попыткой, чтобы избежать дублирования заявок.
+`5xx`, — PayOut-ордер следует считать созданным. Проверьте его статус перед
+повторной попыткой, чтобы избежать дублирования PayOut-ордеров.
 
-Найдите ордер по уникальному `integration.externalOrderId`:
+Найдите PayOut-ордер по уникальному `integration.externalOrderId`:
 
 ```bash
 curl "$BASE_URL/shop/payout-orders/external/$EXTERNAL_ORDER_ID" \
@@ -41,7 +41,7 @@ curl "$BASE_URL/shop/payout-orders/external/$EXTERNAL_ORDER_ID" \
 
 Используйте статус из ответа этого запроса и не отправляйте повторный
 `POST /shop/payout-orders` вслепую. Если результат по-прежнему неизвестен, не
-создавайте вторую выплату с другим ID — передайте случай в поддержку.
+создавайте второй PayOut-ордер с другим ID — передайте случай в поддержку.
 :::
 
 ### Обязательные поля body
@@ -51,7 +51,7 @@ curl "$BASE_URL/shop/payout-orders/external/$EXTERNAL_ORDER_ID" \
 | `amount` | да | положительное число больше `0` |
 | `currency` | да | строка с кодом фиатной валюты, например `RUB` |
 | `customer` | да | объект |
-| `customer.id` | да | стабильный ID клиента в системе магазина; не ID выплаты |
+| `customer.id` | да | стабильный ID клиента в системе магазина; не ID PayOut-ордера |
 | `customer.requisites` | да | объект<br />обязательные вложенные поля зависят от `payment.type` |
 | `payment` | да | объект |
 | `payment.type` | да | Согласованный `paymentType` или код из [списка PayOut-методов](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout); [назначение кодов](/doc/api/shop/05-payment-types/) |
@@ -64,13 +64,13 @@ curl "$BASE_URL/shop/payout-orders/external/$EXTERNAL_ORDER_ID" \
 | `customer.name` | Имя клиента в системе магазина |
 | `customer.email` | Валидный email клиента |
 | `customer.telegram` | Telegram клиента |
-| `integration.externalOrderId` | Уникальный ID выплаты в системе магазина; рекомендуется всегда для поиска после таймаута |
+| `integration.externalOrderId` | Уникальный ID PayOut-ордера в системе магазина; рекомендуется всегда для поиска после таймаута |
 | `integration.callbackUrl` | Полный URL обработчика статусов на сервере магазина |
 | `integration.callbackMethod` | `post` или `get`; по умолчанию `post` |
 
 ### Какие поля обязательны внутри `customer.requisites`
 
-Точный набор обязательных полей нужно брать из [`GET /shop/trade-methods/payout`](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout) по `fields[].required`. Для текущей public payout схемы используются такие значения:
+Точный набор обязательных полей нужно брать из [`GET /shop/trade-methods/payout`](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout) по `fields[].required`. Для текущей схемы публичного PayOut API используются такие значения:
 
 | `payment.type` | Обязательные поля в `customer.requisites` | Требования к обязательным полям |
 | --- | --- | --- |
@@ -83,7 +83,7 @@ curl "$BASE_URL/shop/payout-orders/external/$EXTERNAL_ORDER_ID" \
 | `imps` | `accountNumber`<br />`swiftBic`<br />`cardholder` | `accountNumber`:<br />строка<br /><br />`swiftBic`:<br />строка<br /><br />`cardholder`:<br />строка до `200` символов |
 | `phone_pe` | `phone`<br />`accountNumber` | `phone`:<br />строка длиной от `7` до `16` символов<br /><br />`accountNumber`:<br />строка |
 
-### Поля `customer.requisites`, которые принимает public payout API
+### Поля `customer.requisites`, которые принимает публичный PayOut API
 
 - `phone`
 - `cardInfo`
@@ -125,12 +125,12 @@ curl --location "$BASE_URL/shop/payout-orders" \
 
 | Поле | Значение |
 | --- | --- |
-| `id` | Внутренний UUID выплаты |
+| `id` | Внутренний UUID PayOut-ордера |
 | `amount`, `currency` | Сумма и фиатная валюта выплаты |
 | `status`, `statusDetails` | Текущее состояние и его причина; после создания обычно `requisites` |
 | `payment` | Фактически выбранные `type` и `bank` |
 | `customer` | Данные клиента и реквизиты получателя |
-| `integration.externalOrderId` | ID выплаты магазина |
+| `integration.externalOrderId` | ID PayOut-ордера в системе магазина |
 | `integration.callbackUrlStatus` | Состояние доставки последнего уведомления |
 | `assetCurrencyAmount` | Эквивалент выплаты в asset-валюте |
 | `shopAmount` | Сумма списания с магазина в asset-валюте |

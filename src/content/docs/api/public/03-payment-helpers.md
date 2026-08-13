@@ -5,11 +5,11 @@ pagefind: false
 
 ## GET `/order-requisites/{id}/qr-code`
 
-Получить QR-код по реквизитам ордера.
+Получить QR-код по реквизитам PayIn-ордера.
 
 ## GET `/order-requisites/{id}/nspk-details`
 
-Получить NSPK-детали для реквизитов ордера.
+Получить NSPK-детали для реквизитов PayIn-ордера.
 
 ## GET `/payment/sberpay/{id}`
 

@@ -58,7 +58,7 @@ description: "Какие поля показывать и какие данны�
 ]
 ```
 
-Такие данные обычно передаются в `payment` у `PayIn`-ордера. Например:
+Такие данные обычно передаются в `payment` у PayIn-ордера. Например:
 
 ```json
 {
@@ -82,7 +82,7 @@ description: "Какие поля показывать и какие данны�
 
 - `customer.requisites.cardInfo`
 - `customer.requisites.cardholder`
-- других полях, которые требует выбранный payout method
+- других полях, которые требует выбранный метод PayOut
 
 ## Короткая памятка по полям
 
@@ -119,4 +119,4 @@ description: "Какие поля показывать и какие данны�
 
 - [Выбор банка и типа оплаты](/doc/v2/payment-methods/)
 - [PayIn H2H: реквизиты сразу](/doc/v2/h2h-sync/)
-- [Payout H2H](/doc/v2/payout/)
+- [PayOut H2H](/doc/v2/payout/)

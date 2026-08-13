@@ -4,7 +4,7 @@ title: "PayOut API: чтение и отмена"
 
 ## GET `/shop/payout-orders/{id}`
 
-Получить payout-ордер по ID.
+Получить PayOut-ордер по ID.
 
 ```bash
 curl --location "$BASE_URL/shop/payout-orders/b4ad11f1-10b3-4684-8fe4-2d6f3969e77a" \
@@ -13,7 +13,7 @@ curl --location "$BASE_URL/shop/payout-orders/b4ad11f1-10b3-4684-8fe4-2d6f3969e7
 
 ## GET `/shop/payout-orders/external/{id}`
 
-Получить payout-ордер по `externalOrderId`.
+Получить PayOut-ордер по `externalOrderId`.
 
 ```bash
 curl --location "$BASE_URL/shop/payout-orders/external/merchant-payout-20001" \
@@ -22,7 +22,7 @@ curl --location "$BASE_URL/shop/payout-orders/external/merchant-payout-20001" \
 
 ## POST `/shop/payout-orders/{id}/cancel`
 
-Отменить payout-ордер можно только в `requisites` или `trader_accept`. В
+Отменить PayOut-ордер можно только в `requisites` или `trader_accept`. В
 `trader_payment`, финальных и спорных статусах метод недоступен.
 
 ```bash
@@ -31,7 +31,7 @@ curl --location --request POST "$BASE_URL/shop/payout-orders/b4ad11f1-10b3-4684-
 ```
 
 Если статус не допускает отмену, API вернёт `O10000`. Успешная отмена переводит
-ордер в `cancelled`, устанавливает `statusDetails: shop` и отправляет уведомление.
+PayOut-ордер в `cancelled`, устанавливает `statusDetails: shop` и отправляет уведомление.
 
 Типичный успешный результат:
 

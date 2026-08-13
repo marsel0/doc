@@ -74,7 +74,7 @@ curl --location "$PUBLIC_BASE_URL/trade-methods"
 
 По умолчанию платформа создаёт `trade method` как комбинации всех дефолтных `paymentType` со всеми неархивными банками для дефолтной фиатной валюты.
 
-## Где смотреть payin и payout mapping
+## Где смотреть соответствия PayIn и PayOut
 
 - Для PayIn смотрите [доступные способы и состав полей](/doc/api/shop/04-dictionaries/),
   а также [назначение `payment.type`](/doc/api/shop/05-payment-types/).

@@ -62,14 +62,14 @@ Accept: application/json
 1. Вызовите [`GET /shop/info`](/doc/api/shop/03-info/#get-shopinfo) с `Shop API key` и убедитесь, что `id`, валюта и
    `status` относятся к ожидаемому магазину.
 2. Убедитесь, что `status` равен `active`. При `inactive` API возвращает бизнес-код
-   `S10000`; создавать заказы не нужно.
+   `S10000`; создавать PayIn-ордера и PayOut-ордера не нужно.
 3. Прочитайте [`GET /shop/info/exchange`](/doc/api/shop/03-info/#get-shopinfoexchange), если ваша система показывает суммы в
    валюте баланса или валюте платежа.
 4. Перед показом формы оплаты получите доступные методы и банки либо используйте
    согласованную таблицу кодов.
-5. Для PayOut перед созданием массовой выплаты вызовите [`GET /shop/assets`](/doc/api/shop/02-balances/#get-shopassets).
+5. Перед массовым созданием PayOut-ордеров вызовите [`GET /shop/assets`](/doc/api/shop/02-balances/#get-shopassets).
 6. Настройте PayIn/PayOut согласно профильным разделам; Shop API сам по себе не
-   создаёт клиентский платёжный или payout-ордер.
+   создаёт PayIn-ордера или PayOut-ордера.
 
 ## Что можно и нельзя менять через API
 
