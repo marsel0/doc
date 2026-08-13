@@ -15,7 +15,7 @@ function normalizeOrigin(value) {
 
 function getOrigin() {
   const params = new URLSearchParams(window.location.search);
-  return normalizeOrigin(params.get("domain")) || window.location.origin;
+  return normalizeOrigin(params.get("domain"));
 }
 
 function buildUrl(origin, path = "") {
@@ -23,6 +23,12 @@ function buildUrl(origin, path = "") {
 }
 
 function buildReplacements(origin) {
+  if (!origin) {
+    return {
+      "[[BASE_URL]]": "$BASE_URL",
+    };
+  }
+
   const domain = new URL(origin).host;
   return {
     "[[DOMAIN]]": domain,

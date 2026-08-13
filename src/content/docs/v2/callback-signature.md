@@ -69,20 +69,54 @@ description: "Как принимать статусы и проверять sig
 Пример:
 
 ```js
-function getSignature(payload, signatureKey) {
-  const keys = [...Object.keys(payload), "signatureKey"].sort();
+import { createHash, timingSafeEqual } from "node:crypto";
 
-  const stringToSign = keys
-    .map((key) => {
-      const value = key === "signatureKey" ? signatureKey : payload[key];
-      return value == null ? null : `${key}=${value}`;
-    })
-    .filter(Boolean)
+// Только эти параметры добавляет и подписывает площадка. Собственные параметры
+// из callbackUrl PayIn в подпись не входят.
+const SIGNED_FIELDS = [
+  "id",
+  "amount",
+  "status",
+  "statusDetails",
+  "customerId",
+  "externalOrderId",
+  "disputeAmount",
+  "statusReason",
+  "assetCurrencyAmount",
+  "shopFee",
+  "currencyRate",
+];
+
+function calculateSignature(searchParams, signatureKey) {
+  const payload = Object.fromEntries(
+    SIGNED_FIELDS
+      .filter((key) => searchParams.has(key))
+      .map((key) => [key, searchParams.get(key)]),
+  );
+
+  const stringToSign = [...Object.keys(payload), "signatureKey"]
+    .sort()
+    .map((key) => `${key}=${key === "signatureKey" ? signatureKey : payload[key]}`)
     .join("|");
 
-  return sha1(stringToSign);
+  return createHash("sha1").update(stringToSign, "utf8").digest("hex");
+}
+
+export function verifyCallbackSignature(callbackUrl, signatureKey) {
+  const searchParams = new URL(callbackUrl).searchParams;
+  const signatures = searchParams.getAll("signature");
+  if (signatures.length !== 1) return false;
+
+  const received = Buffer.from(signatures[0], "utf8");
+  const expected = Buffer.from(calculateSignature(searchParams, signatureKey), "utf8");
+
+  return received.length === expected.length && timingSafeEqual(received, expected);
 }
 ```
+
+Передавайте в `callbackUrl` полный URL входящего запроса. При неверной или
+отсутствующей подписи не применяйте статус. Сравнивайте подписи целиком и не
+добавляйте в расчёт произвольные query-параметры.
 
 ## Как обрабатывать уведомление
 
@@ -90,6 +124,13 @@ function getSignature(payload, signatureKey) {
 - после сохранения статуса возвращайте `200`;
 - переход клиента по ссылке не заменяет уведомление о статусе;
 - на время подключения сохраняйте полученные параметры в логах.
+
+Callback сообщает актуальное состояние, но не является журналом всех переходов.
+Когда статус меняется, платформа отменяет ещё не доставленное уведомление о
+предыдущем статусе и создаёт новое. Поэтому промежуточный статус может не прийти,
+а порядок всех переходов нельзя восстанавливать только по callback. После сбоя
+или длительной недоступности обработчика прочитайте текущее состояние через
+`GET /shop/orders/{id}` или `GET /shop/payout-orders/{id}`.
 
 ## Повторная доставка
 
@@ -106,7 +147,17 @@ function getSignature(payload, signatureKey) {
 - 6 часов
 - ещё 6 часов
 
-Если доставка долго не удаётся, её статус у ордера может перейти в `error`.
+`integration.callbackUrlStatus` относится к доставке последнего уведомления:
+
+- `in_progress` — уведомление создано и ожидает отправки;
+- `error` — последняя попытка завершилась ошибкой; запланированные повторы при
+  этом продолжаются;
+- `success` — одна из попыток получила ответ `2xx`.
+
+Таким образом, `error` устанавливается уже после первой неудачной попытки, а не
+только после исчерпания повторов. Последующая успешная попытка меняет его на
+`success`; новое изменение статуса ордера снова создаёт уведомление со значением
+`in_progress`.
 
 ## Что логировать
 

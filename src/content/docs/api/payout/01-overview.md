@@ -26,6 +26,10 @@ title: "PayOut API"
   [получите PayOut-методы и банки через API](/doc/api/payout/04-dictionaries/#get-shoptrade-methodspayout).
 - `externalOrderId` должен быть уникальным в вашей системе: он нужен для безопасного
   поиска ордера после сбоя или таймаута.
+- если создание не завершилось стандартным ответом API с явным отказом, считайте
+  payout созданным и проверьте его через
+  [`GET /shop/payout-orders/external/{id}`](/doc/api/payout/03-read-and-cancel/#get-shoppayout-ordersexternalid).
+  До проверки не повторяйте `POST` и не создавайте выплату с новым `externalOrderId`.
 
 ## Страницы
 
