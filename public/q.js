@@ -1,3 +1,5 @@
+const CUSTOM_DOMAIN_STORAGE_KEY = "customDomain";
+
 function normalizeOrigin(value) {
   if (!value) return null;
 
@@ -15,7 +17,23 @@ function normalizeOrigin(value) {
 
 function getOrigin() {
   const params = new URLSearchParams(window.location.search);
-  return normalizeOrigin(params.get("domain"));
+  const originFromUrl = normalizeOrigin(params.get("domain"));
+
+  if (originFromUrl) {
+    try {
+      localStorage.setItem(CUSTOM_DOMAIN_STORAGE_KEY, originFromUrl);
+    } catch {
+      // The replacement still works when storage is unavailable.
+    }
+
+    return originFromUrl;
+  }
+
+  try {
+    return normalizeOrigin(localStorage.getItem(CUSTOM_DOMAIN_STORAGE_KEY));
+  } catch {
+    return null;
+  }
 }
 
 function buildUrl(origin, path = "") {
@@ -31,6 +49,8 @@ function buildReplacements(origin) {
 
   const domain = new URL(origin).host;
   return {
+    "merchant.example": domain,
+    "bank.example": domain,
     "[[DOMAIN]]": domain,
     "[[DOMAIN_URL]]": origin,
     "[[PROJECT_NAME]]": domain,
