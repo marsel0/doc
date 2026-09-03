@@ -55,6 +55,7 @@ function buildReplacements(origin) {
     "[[DOMAIN_URL]]": origin,
     "[[PROJECT_NAME]]": domain,
     "[[BASE_URL]]": buildUrl(origin, "/public/api/v1"),
+    "$BASE_URL": buildUrl(origin, "/public/api/v1"),
     "[[LOGIN_URL]]": buildUrl(origin, "/login"),
     "[[APP_URL]]": origin,
     "[[CALLBACK_URL]]": buildUrl(origin, "/payments/callback"),
